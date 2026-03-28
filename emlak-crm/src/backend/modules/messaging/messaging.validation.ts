@@ -9,24 +9,24 @@ export const conversationStatusEnum = z.enum(['OPEN', 'PENDING', 'RESOLVED', 'CL
 });
 
 export const createConversationSchema = z.object({
-  contact_id: z.string().uuid('Gecersiz musteri ID'),
+  contact_id: z.string().min(1, 'Musteri ID gerekli'),
   channel: messageChannelEnum,
-  assigned_user_id: z.string().uuid('Gecersiz kullanici ID').optional().nullable(),
+  assigned_user_id: z.string().min(1, 'Kullanici ID gerekli').optional().nullable(),
 });
 
 export const updateConversationSchema = z.object({
   status: conversationStatusEnum.optional(),
-  assigned_user_id: z.string().uuid('Gecersiz kullanici ID').optional().nullable(),
+  assigned_user_id: z.string().min(1, 'Kullanici ID gerekli').optional().nullable(),
 });
 
 export const sendMessageSchema = z.object({
-  conversation_id: z.string().uuid('Gecersiz konusma ID').optional(),
-  contact_id: z.string().uuid('Gecersiz musteri ID').optional(),
+  conversation_id: z.string().min(1, 'Konusma ID gerekli').optional(),
+  contact_id: z.string().min(1, 'Musteri ID gerekli').optional(),
   channel: messageChannelEnum,
   content: z.string().min(1, 'Mesaj icerigi gerekli').max(4096, 'Mesaj cok uzun'),
   media_url: z.string().url('Gecersiz medya URL').optional().nullable(),
   media_type: z.string().max(50).optional().nullable(),
-  template_id: z.string().uuid('Gecersiz sablon ID').optional().nullable(),
+  template_id: z.string().min(1, 'Sablon ID gerekli').optional().nullable(),
 }).refine(
   (data) => data.conversation_id || data.contact_id,
   { message: 'Konusma ID veya musteri ID gerekli', path: ['conversation_id'] }
@@ -50,7 +50,7 @@ export const messageFilterSchema = z.object({
 });
 
 export const conversationIdParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
 });
 
 export const whatsappWebhookSchema = z.object({

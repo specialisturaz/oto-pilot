@@ -17,10 +17,10 @@ export const createDealSchema = z.object({
     .trim(),
   deal_type: dealTypeEnum,
   stage: dealStageEnum.optional().default('lead'),
-  property_id: z.string().uuid('Gecersiz emlak ID').optional().nullable(),
-  buyer_id: z.string().uuid('Gecersiz alici ID').optional().nullable(),
-  seller_id: z.string().uuid('Gecersiz satici ID').optional().nullable(),
-  assigned_to_id: z.string().uuid('Gecersiz danisan ID').optional().nullable(),
+  property_id: z.string().min(1, 'Emlak ID gerekli').optional().nullable(),
+  buyer_id: z.string().min(1, 'Alici ID gerekli').optional().nullable(),
+  seller_id: z.string().min(1, 'Satici ID gerekli').optional().nullable(),
+  assigned_to_id: z.string().min(1, 'Danisman ID gerekli').optional().nullable(),
 
   // Financials
   expected_price: z.number().min(0).optional().nullable(),
@@ -73,7 +73,7 @@ export const dealFilterSchema = z.object({
 });
 
 export const dealIdParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
 });
 
 export type CreateDealInput = z.infer<typeof createDealSchema>;

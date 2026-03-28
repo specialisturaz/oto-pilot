@@ -21,7 +21,7 @@ router.patch('/mark-all-read', notificationsController.markAllAsRead);
 // Mark single notification as read
 router.patch(
   '/:id/mark-read',
-  validate({ params: z.object({ id: z.string().uuid('Gecersiz ID formati') }) }),
+  validate({ params: z.object({ id: z.string().min(1, 'ID gerekli') }) }),
   notificationsController.markAsRead
 );
 

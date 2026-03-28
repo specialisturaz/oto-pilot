@@ -76,7 +76,7 @@ export const createNoteSchema = z.object({
 });
 
 export const idParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
 });
 
 export type CreateContactInput = z.infer<typeof createContactSchema>;

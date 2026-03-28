@@ -31,7 +31,7 @@ router.patch(
   '/:id/assign',
   validate({
     params: taskIdParamSchema,
-    body: z.object({ assigned_to_id: z.string().uuid('Gecersiz kullanici ID') }),
+    body: z.object({ assigned_to_id: z.string().min(1, 'Kullanici ID gerekli') }),
   }),
   tasksController.assign
 );

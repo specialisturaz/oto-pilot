@@ -76,8 +76,8 @@ export const createPropertySchema = z.object({
   imar_durumu: z.string().max(100).optional().nullable(),
 
   // Relations
-  seller_contact_id: z.string().uuid().optional().nullable(),
-  assigned_to_id: z.string().uuid().optional().nullable(),
+  seller_contact_id: z.string().min(1).optional().nullable(),
+  assigned_to_id: z.string().min(1).optional().nullable(),
 
   // Extras
   features: z.array(z.string().max(50)).max(50).optional(),
@@ -118,12 +118,12 @@ export const propertyFilterSchema = z.object({
 });
 
 export const propertyIdParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
 });
 
 export const photoIdParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
-  photoId: z.string().uuid('Gecersiz fotograf ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
+  photoId: z.string().min(1, 'Fotograf ID gerekli'),
 });
 
 export const publishPropertySchema = z.object({

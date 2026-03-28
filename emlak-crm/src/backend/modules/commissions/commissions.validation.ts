@@ -9,8 +9,8 @@ export const commissionStatusEnum = z.enum(['PENDING', 'INVOICED', 'PARTIALLY_PA
 });
 
 export const createCommissionSchema = z.object({
-  deal_id: z.string().uuid('Gecersiz anlasma ID'),
-  agent_id: z.string().uuid('Gecersiz danisMan ID'),
+  deal_id: z.string().min(1, 'Anlasma ID gerekli'),
+  agent_id: z.string().min(1, 'Danisman ID gerekli'),
   type: commissionTypeEnum,
   rate: z
     .number()
@@ -35,7 +35,7 @@ export const createCommissionSchema = z.object({
 export const updateCommissionSchema = createCommissionSchema.partial();
 
 export const calculateCommissionSchema = z.object({
-  deal_id: z.string().uuid('Gecersiz anlasma ID'),
+  deal_id: z.string().min(1, 'Anlasma ID gerekli'),
   sale_price: z
     .number({ required_error: 'Satis fiyati gerekli' })
     .min(0, 'Fiyat 0\'dan kucuk olamaz'),
@@ -70,7 +70,7 @@ export const commissionFilterSchema = z.object({
 });
 
 export const commissionIdParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
 });
 
 export type CreateCommissionInput = z.infer<typeof createCommissionSchema>;

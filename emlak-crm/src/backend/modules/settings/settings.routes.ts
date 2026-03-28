@@ -44,7 +44,7 @@ router.get('/templates', settingsController.listTemplates);
 
 router.get(
   '/templates/:id',
-  validate({ params: z.object({ id: z.string().uuid('Gecersiz ID formati') }) }),
+  validate({ params: z.object({ id: z.string().min(1, 'ID gerekli') }) }),
   settingsController.getTemplate
 );
 
@@ -69,7 +69,7 @@ router.put(
   '/templates/:id',
   requireRole(['ADMIN', 'MANAGER']),
   validate({
-    params: z.object({ id: z.string().uuid('Gecersiz ID formati') }),
+    params: z.object({ id: z.string().min(1, 'ID gerekli') }),
     body: z.object({
       name: z.string().min(2).max(100).trim().optional(),
       channel: z.enum(['WHATSAPP', 'SMS', 'EMAIL', 'INTERNAL']).optional(),
@@ -86,7 +86,7 @@ router.put(
 router.delete(
   '/templates/:id',
   requireRole(['ADMIN', 'MANAGER']),
-  validate({ params: z.object({ id: z.string().uuid('Gecersiz ID formati') }) }),
+  validate({ params: z.object({ id: z.string().min(1, 'ID gerekli') }) }),
   settingsController.deleteTemplate
 );
 

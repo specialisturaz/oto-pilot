@@ -19,9 +19,9 @@ export const createAppointmentSchema = z
       .trim(),
     type: appointmentTypeEnum.optional().default('SHOWING'),
     status: appointmentStatusEnum.optional().default('SCHEDULED'),
-    contact_id: z.string().uuid('Gecersiz musteri ID'),
-    property_id: z.string().uuid('Gecersiz emlak ID').optional().nullable(),
-    deal_id: z.string().uuid('Gecersiz anlasma ID').optional().nullable(),
+    contact_id: z.string().min(1, 'Musteri ID gerekli'),
+    property_id: z.string().min(1, 'Emlak ID gerekli').optional().nullable(),
+    deal_id: z.string().min(1, 'Anlasma ID gerekli').optional().nullable(),
     start_time: z.string().datetime({ message: 'Gecersiz baslangic tarihi' }),
     end_time: z.string().datetime({ message: 'Gecersiz bitis tarihi' }),
     location: z.string().max(500).optional().nullable(),
@@ -36,9 +36,9 @@ export const updateAppointmentSchema = z.object({
   title: z.string().min(3).max(200).trim().optional(),
   type: appointmentTypeEnum.optional(),
   status: appointmentStatusEnum.optional(),
-  contact_id: z.string().uuid('Gecersiz musteri ID').optional(),
-  property_id: z.string().uuid('Gecersiz emlak ID').optional().nullable(),
-  deal_id: z.string().uuid('Gecersiz anlasma ID').optional().nullable(),
+  contact_id: z.string().min(1, 'Musteri ID gerekli').optional(),
+  property_id: z.string().min(1, 'Emlak ID gerekli').optional().nullable(),
+  deal_id: z.string().min(1, 'Anlasma ID gerekli').optional().nullable(),
   start_time: z.string().datetime().optional(),
   end_time: z.string().datetime().optional(),
   location: z.string().max(500).optional().nullable(),
@@ -64,11 +64,11 @@ export const appointmentFilterSchema = z.object({
 export const dateRangeSchema = z.object({
   start: z.string().datetime({ message: 'Gecersiz baslangic tarihi' }),
   end: z.string().datetime({ message: 'Gecersiz bitis tarihi' }),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().min(1).optional(),
 });
 
 export const appointmentIdParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
 });
 
 export type CreateAppointmentInput = z.infer<typeof createAppointmentSchema>;

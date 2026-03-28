@@ -23,10 +23,10 @@ export const createTaskSchema = z.object({
   type: taskTypeEnum.optional().default('OTHER'),
   priority: taskPriorityEnum.optional().default('MEDIUM'),
   status: taskStatusEnum.optional().default('TODO'),
-  assigned_to_id: z.string().uuid('Gecersiz kullanici ID').optional().nullable(),
-  contact_id: z.string().uuid('Gecersiz musteri ID').optional().nullable(),
-  property_id: z.string().uuid('Gecersiz emlak ID').optional().nullable(),
-  deal_id: z.string().uuid('Gecersiz anlasma ID').optional().nullable(),
+  assigned_to_id: z.string().min(1, 'Kullanici ID gerekli').optional().nullable(),
+  contact_id: z.string().min(1, 'Musteri ID gerekli').optional().nullable(),
+  property_id: z.string().min(1, 'Emlak ID gerekli').optional().nullable(),
+  deal_id: z.string().min(1, 'Anlasma ID gerekli').optional().nullable(),
   due_date: z.string().datetime({ message: 'Gecersiz tarih formati' }).optional().nullable(),
   reminder_at: z.string().datetime({ message: 'Gecersiz hatirlatma tarihi' }).optional().nullable(),
   is_recurring: z.boolean().optional().default(false),
@@ -63,7 +63,7 @@ export const taskFilterSchema = z.object({
 });
 
 export const taskIdParamSchema = z.object({
-  id: z.string().uuid('Gecersiz ID formati'),
+  id: z.string().min(1, 'ID gerekli'),
 });
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
