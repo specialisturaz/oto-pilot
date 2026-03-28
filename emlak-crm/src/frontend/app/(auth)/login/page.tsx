@@ -30,6 +30,8 @@ export default function LoginPage() {
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isQuickLoading, setIsQuickLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -40,19 +42,23 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  const doLogin = async (email: string, password: string) => {
+    const response = await api.post("/api/v1/auth/login", { email, password });
+    const { user, access_token, refresh_token } = response.data.data;
+    login(user, access_token, refresh_token);
+    if (rememberMe) {
+      localStorage.setItem("emlak-crm-remember", "true");
+    } else {
+      localStorage.removeItem("emlak-crm-remember");
+    }
+    router.push("/");
+  };
+
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     setError(null);
-
     try {
-      const response = await api.post("/api/v1/auth/login", {
-        email: data.email,
-        password: data.password,
-      });
-
-      const { user, access_token, refresh_token } = response.data.data;
-      login(user, access_token, refresh_token);
-      router.push("/");
+      await doLogin(data.email, data.password);
     } catch (err: any) {
       setError(
         err.response?.data?.error?.message ||
@@ -60,6 +66,18 @@ export default function LoginPage() {
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async () => {
+    setIsQuickLoading(true);
+    setError(null);
+    try {
+      await doLogin("admin@emlakcrm.com", "password123");
+    } catch (err: any) {
+      setError("Hizli giris basarisiz. Backend calisiyor mu?");
+    } finally {
+      setIsQuickLoading(false);
     }
   };
 
@@ -157,12 +175,26 @@ export default function LoginPage() {
                 )}
               </div>
 
+              {/* Remember Me */}
+              <div className="flex items-center gap-2">
+                <input
+                  id="remember"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                  Beni hatirla
+                </label>
+              </div>
+
               {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full"
                 size="lg"
-                disabled={isLoading}
+                disabled={isLoading || isQuickLoading}
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -171,6 +203,25 @@ export default function LoginPage() {
                   </span>
                 ) : (
                   "Giris Yap"
+                )}
+              </Button>
+
+              {/* Quick Login for Testing */}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-dashed"
+                size="lg"
+                disabled={isLoading || isQuickLoading}
+                onClick={handleQuickLogin}
+              >
+                {isQuickLoading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Giris yapiliyor...
+                  </span>
+                ) : (
+                  "Demo Hesap ile Hizli Giris"
                 )}
               </Button>
 
