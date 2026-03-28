@@ -12,10 +12,28 @@ agents/
     index.ts           Entry point - main loop, dispatching, reporting
     task-manager.ts    Priority queue, dependency resolution, task lifecycle
     state-manager.ts   File I/O, phase transitions, progress calculation
+  skills/              Skill documents agents reference during work
+    code-review.md     Code review checklist (security, architecture, TS, Prisma)
+    tdd-workflow.md    TDD cycle with Vitest, RTL, and Playwright patterns
+    database-review.md Prisma schema, indexes, N+1, Turkish locale, KVKK
+    frontend-patterns.md Next.js 14 App Router, shadcn/ui, Zustand, React Query
+    api-design.md      Express RESTful conventions, Zod, error standards, pagination
+    portal-sync.md     Turkish portal integrations (Sahibinden, Hepsiemlak, Emlakjet)
+    continuous-learning.md Pattern extraction, instincts, domain knowledge
+  hooks/               Lifecycle hooks for development workflow
+    pre-commit.sh      Pre-commit quality gate (types, lint, tests, Prisma)
+    session-save.ts    Save current agent context for later resumption
+    session-load.ts    Restore a previously saved session
   state/               Persistent state (JSON files)
     orchestrator-state.json
     task-queue.json
-    inboxes/           Per-agent message inboxes (created at runtime)
+    current-session.json         Most recent session snapshot
+    sessions/                    Historical session snapshots
+    learned-patterns.jsonl       Extracted code/architecture patterns
+    instincts.json               Agent decision heuristics
+    domain-knowledge.json        Turkish RE domain facts
+    learning-log.jsonl           Audit trail of learning events
+    inboxes/                     Per-agent message inboxes (created at runtime)
   logs/                Daily log files (created at runtime)
   architect/           Architect agent workspace
   backend-dev/         Backend developer agent workspace
@@ -102,6 +120,150 @@ Tasks are sorted by priority weight (CRITICAL > HIGH > MEDIUM > LOW), then by cr
 
 Each task lists its dependencies by task ID. A task cannot start until all its dependencies are COMPLETED. When a task completes, the orchestrator checks all downstream tasks and unblocks any whose dependencies are now fully satisfied.
 
+## Skills System
+
+Skills are detailed markdown documents in `agents/skills/` that provide domain-specific guidance to agents. Each skill contains checklists, code patterns, and decision frameworks that agents reference when executing tasks.
+
+### Available Skills
+
+| Skill | File | Used By | Description |
+|---|---|---|---|
+| Code Review | `skills/code-review.md` | All agents | Architecture compliance, OWASP/KVKK security, TypeScript best practices, Prisma optimization, domain terminology |
+| TDD Workflow | `skills/tdd-workflow.md` | backend-dev, frontend-dev, testing | Red-Green-Refactor cycle, Vitest/RTL/Playwright patterns, test naming |
+| Database Review | `skills/database-review.md` | backend-dev, architect | Prisma schema validation, index optimization, N+1 detection, Turkish locale, migration safety, KVKK retention |
+| Frontend Patterns | `skills/frontend-patterns.md` | frontend-dev | App Router, Server/Client components, shadcn/ui, Zustand, React Query, Turkish i18n, responsive design |
+| API Design | `skills/api-design.md` | backend-dev, architect | RESTful conventions, Zod validation, error standards, pagination, rate limiting, Turkish error messages |
+| Portal Sync | `skills/portal-sync.md` | integration | Sahibinden XML, Hepsiemlak/Emlakjet REST, sync scheduling, conflict resolution, retry/recovery |
+| Continuous Learning | `skills/continuous-learning.md` | orchestrator, all agents | Pattern extraction, instinct-based learning, domain knowledge accumulation, confidence scoring |
+
+### How Skills Are Used
+
+1. When a task is dispatched, the orchestrator attaches relevant skill references based on the task's tags and the assignee's role.
+2. The assigned agent reads the skill document to understand the applicable patterns and checklists.
+3. During code review, the reviewing agent uses `skills/code-review.md` as the evaluation rubric.
+4. After task completion, the agent may update `skills/continuous-learning.md` with new patterns discovered.
+
+### Adding a New Skill
+
+1. Create a markdown file in `agents/skills/` following the existing format.
+2. Register the skill in the `AgentSkill` type definition in `agents/contracts/type-definitions.ts`.
+3. Document which roles and phases the skill applies to.
+4. Reference the skill in relevant task definitions via tags.
+
+## Hooks
+
+Hooks are scripts that run at specific points in the development lifecycle, inspired by community patterns from the Claude Code ecosystem.
+
+### Pre-Commit Hook
+
+The pre-commit hook (`agents/hooks/pre-commit.sh`) runs before every git commit to catch quality issues early.
+
+**What it checks:**
+1. TypeScript type check (`tsc --noEmit`)
+2. ESLint on changed files only (fast, targeted)
+3. Affected unit tests (finds co-located test files for changed source files)
+4. Prisma schema validation (only when `schema.prisma` is staged)
+5. Sensitive data detection (blocks `.env`, credentials files)
+
+**Installation:**
+```bash
+# Symlink the hook into .git/hooks/
+ln -sf ../../agents/hooks/pre-commit.sh .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+### Session Save/Load Hooks
+
+These hooks provide session continuity across work sessions, allowing agents (and developers) to save their context and resume later.
+
+**Save a session:**
+```bash
+# Auto-generate summary from current state
+npx tsx agents/hooks/session-save.ts
+
+# With manual context
+npx tsx agents/hooks/session-save.ts \
+  --agent backend-dev \
+  --summary "Completed auth middleware, starting CRUD endpoints" \
+  --accomplished "JWT middleware with refresh rotation" \
+  --accomplished "RBAC middleware for 4 roles" \
+  --blocker "Redis connection pooling config needed" \
+  --note "Consider rate limiting before portal sync"
+```
+
+**Load a session:**
+```bash
+# Load most recent session
+npx tsx agents/hooks/session-load.ts
+
+# List all saved sessions
+npx tsx agents/hooks/session-load.ts --list
+
+# Load a specific session
+npx tsx agents/hooks/session-load.ts --id session-20260328-120000-a1b2
+```
+
+**What gets saved:**
+- Session ID and timestamp
+- Which agent was active
+- Accomplishments and summary
+- Files changed (from git history)
+- Blockers and pending decisions
+- Active task states
+- Project phase and progress
+- Git branch and commit info
+- Freeform notes
+
+## Continuous Learning
+
+The agent system accumulates knowledge over time through three mechanisms:
+
+### 1. Pattern Extraction
+After each task completion, the assigned agent extracts reusable patterns. These are stored in `agents/state/learned-patterns.jsonl` and include:
+- Code patterns (e.g., "Use batch queries instead of loops for Prisma")
+- Architecture decisions (e.g., "BFF endpoint for dashboard aggregation")
+- Integration quirks (e.g., "Sahibinden requires plain text descriptions")
+
+### 2. Instinct-Based Learning
+Instincts are lightweight "if X then Y" heuristics with confidence scores. They are reinforced when they produce positive outcomes and weakened by contradictions. Stored in `agents/state/instincts.json`.
+
+Example instincts:
+- "When I see a Prisma query inside a loop, refactor to batch query" (confidence: 0.95)
+- "When adding a new model, also add foreign key indexes" (confidence: 0.95)
+- "When handling phone numbers, normalize to +90XXXXXXXXXX immediately" (confidence: 0.95)
+
+### 3. Domain Knowledge
+Facts about Turkish real estate, portal APIs, and regulations are stored in `agents/state/domain-knowledge.json`. This includes portal-specific field mappings, KVKK requirements, and market conventions.
+
+### Confidence Scoring
+All learned patterns carry a confidence score (0.0 to 1.0):
+- **0.9+**: Very high confidence, always applied
+- **0.7-0.89**: High confidence, applied unless context contradicts
+- **0.5-0.69**: Medium confidence, applied only with strong context match
+- **Below 0.3**: Flagged for review or archived
+
+See `agents/skills/continuous-learning.md` for full details.
+
+## Community Best Practices
+
+This agent system integrates patterns from the Claude Code community:
+
+### From "everything-claude-code"
+- **Session persistence**: Save/load hooks for context continuity across sessions
+- **Skill-based architecture**: Detailed markdown documents as reusable agent skills
+- **Instinct learning**: Probabilistic heuristics that improve with experience
+
+### From "claude-code-best-practices"
+- **Pre-commit quality gates**: Targeted checks on changed files only (fast feedback)
+- **Structured task output**: Every task produces typed `TaskOutput` with files created/modified
+- **Phase-gated progression**: Strict phase ordering prevents premature work
+
+### From Multi-Agent Orchestration Patterns
+- **Priority-based dispatch**: Critical tasks always get dispatched first
+- **Dependency resolution**: Automatic unblocking when prerequisites complete
+- **Heartbeat monitoring**: Regular progress recalculation and stall detection
+- **Message-based communication**: Agents communicate through inbox files, not shared state
+
 ## How Agents Communicate
 
 Agents communicate through JSON files:
@@ -155,6 +317,40 @@ All state is persisted as JSON for transparency and debuggability:
 
 - **`agents/state/orchestrator-state.json`** - Orchestrator runtime state (active tasks, progress, message log, errors).
 - **`agents/state/task-queue.json`** - All task definitions with status, dependencies, and output.
+- **`agents/state/current-session.json`** - Most recently saved session snapshot.
+- **`agents/state/sessions/`** - Historical session snapshots for review.
+- **`agents/state/learned-patterns.jsonl`** - Extracted patterns from completed work.
+- **`agents/state/instincts.json`** - Agent decision heuristics with confidence scores.
+- **`agents/state/domain-knowledge.json`** - Turkish real estate domain facts.
 - **`project-state.json`** (project root) - High-level project phase tracking.
 
 These files can be inspected at any time to understand the current state of the build.
+
+## Type System
+
+All agent system types are defined in `agents/contracts/type-definitions.ts`:
+
+### Core Types
+- `ProjectPhase`, `AgentRole`, `TaskStatus`, `Priority` - Enums for system state
+- `TaskDefinition`, `TaskOutput` - Task structure and results
+- `AgentMessage` - Inter-agent communication
+- `OrchestratorState`, `ProjectState` - System state
+
+### Skills & Learning Types
+- `AgentSkill` - Skill document metadata
+- `LearnedPattern` - Extracted code/architecture patterns
+- `LearningInstinct` - Decision heuristics with confidence
+- `DomainKnowledgeEntry` - Domain-specific facts
+
+### Session Types
+- `SessionContext` - Full session snapshot for save/load
+- `SessionFileChange`, `SessionBlocker`, `SessionPendingTask` - Session details
+
+### Configuration Types
+- `HeartbeatConfig` - Orchestrator timing and schedule configuration
+- `DEFAULT_HEARTBEAT_CONFIG` - Sensible defaults for all intervals
+
+### Portal Types
+- `PortalConfig` - Portal connection configuration
+- `PortalSyncResult` - Sync operation outcome
+- `PortalHealth` - Portal health status
