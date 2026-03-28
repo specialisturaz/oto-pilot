@@ -1,0 +1,76 @@
+# ============================================================================
+# Emlak CRM - Docker Compose (Local Development)
+# Yerel gelistirme ortami icin PostgreSQL ve Redis servisleri
+# ============================================================================
+
+version: "3.9"
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL 16 - Ana Veritabani
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: emlak-crm-postgres
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-emlak_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-emlak_pass_2024}
+      POSTGRES_DB: ${DB_NAME:-emlak_crm}
+      # Turkish locale support
+      LANG: tr_TR.UTF-8
+      LC_ALL: tr_TR.UTF-8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    command: >
+      postgres
+        -c shared_buffers=256MB
+        -c effective_cache_size=768MB
+        -c work_mem=16MB
+        -c maintenance_work_mem=128MB
+        -c max_connections=100
+        -c log_timezone=Europe/Istanbul
+        -c timezone=Europe/Istanbul
+        -c lc_messages=en_US.UTF-8
+    networks:
+      - emlak-crm-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-emlak_user} -d ${DB_NAME:-emlak_crm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # --------------------------------------------------------------------------
+  # Redis 7 - Cache & Queue
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: emlak-crm-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - emlak-crm-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  emlak-crm-network:
+    driver: bridge
+    name: emlak-crm-network

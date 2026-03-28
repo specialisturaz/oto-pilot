@@ -1,0 +1,229 @@
+# ============================================================================
+# Emlak CRM - CI Pipeline
+# Lint, type check, test ve build kontrolleri
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  DATABASE_URL: "postgresql://test_user:test_pass@localhost:5432/emlak_crm_test?schema=public"
+  JWT_SECRET: "ci-test-jwt-secret"
+  JWT_REFRESH_SECRET: "ci-test-jwt-refresh-secret"
+  REDIS_URL: "redis://localhost:6379"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Lint - ESLint Kontrolu
+  # --------------------------------------------------------------------------
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  # --------------------------------------------------------------------------
+  # Type Check - TypeScript Derleme Kontrolu
+  # --------------------------------------------------------------------------
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: TypeScript type check (backend)
+        run: npx tsc --noEmit
+
+  # --------------------------------------------------------------------------
+  # Backend Tests - Vitest ile birim testler
+  # --------------------------------------------------------------------------
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: emlak_crm_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d emlak_crm_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 30s
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Push database schema
+        run: npx prisma db push --skip-generate
+
+      - name: Run backend tests
+        run: npm run test -- --run --reporter=verbose
+        env:
+          NODE_ENV: test
+
+  # --------------------------------------------------------------------------
+  # Frontend Build - Next.js derleme kontrolu
+  # --------------------------------------------------------------------------
+  test-frontend:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build:frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api
+
+  # --------------------------------------------------------------------------
+  # E2E Tests - Playwright (sadece main'e PR'larda)
+  # --------------------------------------------------------------------------
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    needs: [lint, typecheck, test-backend, test-frontend]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: emlak_crm_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d emlak_crm_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 30s
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Push database schema
+        run: npx prisma db push --skip-generate
+
+      - name: Seed test data
+        run: npm run db:seed
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001/api
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

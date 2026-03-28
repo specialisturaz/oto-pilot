@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/mekte/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\mekte\\.claude"
+    ]
+  }
+}

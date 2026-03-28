@@ -1,0 +1,117 @@
+{
+  "portals": [
+    {
+      "name": "Sahibinden.com",
+      "slug": "sahibinden",
+      "baseUrl": "https://www.sahibinden.com",
+      "apiUrl": "https://api.sahibinden.com/v1",
+      "isActive": true,
+      "settings": {
+        "description": "Turkiye'nin en buyuk ilan platformu",
+        "maxPhotos": 20,
+        "maxTitleLength": 100,
+        "maxDescriptionLength": 4000,
+        "supportedListingTypes": ["SALE", "RENT", "DAILY_RENT"],
+        "supportedPropertyTypes": [
+          "APARTMENT", "VILLA", "DETACHED", "RESIDENCE", "OFFICE",
+          "SHOP", "STORE", "WAREHOUSE", "FACTORY", "LAND",
+          "ZONED_LAND", "FIELD", "GARDEN"
+        ],
+        "listingFeeRequired": true,
+        "autoRenewAvailable": true,
+        "featuredListingAvailable": true,
+        "syncInterval": 30
+      }
+    },
+    {
+      "name": "Hepsiemlak",
+      "slug": "hepsiemlak",
+      "baseUrl": "https://www.hepsiemlak.com",
+      "apiUrl": "https://api.hepsiemlak.com/v2",
+      "isActive": true,
+      "settings": {
+        "description": "Turkiye'nin oncu emlak portali",
+        "maxPhotos": 30,
+        "maxTitleLength": 120,
+        "maxDescriptionLength": 5000,
+        "supportedListingTypes": ["SALE", "RENT", "DAILY_RENT"],
+        "supportedPropertyTypes": [
+          "APARTMENT", "VILLA", "DETACHED", "RESIDENCE", "OFFICE",
+          "SHOP", "STORE", "WAREHOUSE", "LAND", "ZONED_LAND"
+        ],
+        "listingFeeRequired": true,
+        "autoRenewAvailable": true,
+        "featuredListingAvailable": true,
+        "syncInterval": 30
+      }
+    },
+    {
+      "name": "Emlakjet",
+      "slug": "emlakjet",
+      "baseUrl": "https://www.emlakjet.com",
+      "apiUrl": "https://api.emlakjet.com/v1",
+      "isActive": true,
+      "settings": {
+        "description": "Hizli ve kolay emlak ilanlari",
+        "maxPhotos": 25,
+        "maxTitleLength": 100,
+        "maxDescriptionLength": 4000,
+        "supportedListingTypes": ["SALE", "RENT", "DAILY_RENT"],
+        "supportedPropertyTypes": [
+          "APARTMENT", "VILLA", "DETACHED", "RESIDENCE", "OFFICE",
+          "SHOP", "LAND", "ZONED_LAND"
+        ],
+        "listingFeeRequired": false,
+        "autoRenewAvailable": true,
+        "featuredListingAvailable": true,
+        "syncInterval": 60
+      }
+    },
+    {
+      "name": "Zingat",
+      "slug": "zingat",
+      "baseUrl": "https://www.zingat.com",
+      "apiUrl": "https://api.zingat.com/v1",
+      "isActive": true,
+      "settings": {
+        "description": "Akilli emlak arama platformu",
+        "maxPhotos": 30,
+        "maxTitleLength": 100,
+        "maxDescriptionLength": 5000,
+        "supportedListingTypes": ["SALE", "RENT"],
+        "supportedPropertyTypes": [
+          "APARTMENT", "VILLA", "DETACHED", "RESIDENCE", "OFFICE",
+          "SHOP", "LAND", "ZONED_LAND"
+        ],
+        "listingFeeRequired": false,
+        "autoRenewAvailable": false,
+        "featuredListingAvailable": true,
+        "syncInterval": 60
+      }
+    },
+    {
+      "name": "Endeksa",
+      "slug": "endeksa",
+      "baseUrl": "https://www.endeksa.com",
+      "apiUrl": "https://api.endeksa.com/v1",
+      "isActive": true,
+      "settings": {
+        "description": "Emlak verileri ve degerleme platformu",
+        "maxPhotos": 20,
+        "maxTitleLength": 100,
+        "maxDescriptionLength": 4000,
+        "supportedListingTypes": ["SALE", "RENT"],
+        "supportedPropertyTypes": [
+          "APARTMENT", "VILLA", "DETACHED", "RESIDENCE",
+          "LAND", "ZONED_LAND"
+        ],
+        "listingFeeRequired": false,
+        "autoRenewAvailable": false,
+        "featuredListingAvailable": false,
+        "syncInterval": 120,
+        "valuationApiAvailable": true,
+        "marketDataAvailable": true
+      }
+    }
+  ]
+}

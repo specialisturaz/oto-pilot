@@ -1,0 +1,25 @@
+{
+  "isRunning": false,
+  "currentPhase": "INIT",
+  "activeTasks": [],
+  "completedTasks": [],
+  "failedTasks": [],
+  "blockedTasks": [],
+  "totalProgress": 0,
+  "phaseProgress": {
+    "INIT": 0,
+    "RESEARCH": 0,
+    "ARCHITECTURE": 0,
+    "CORE_BACKEND": 0,
+    "CORE_FRONTEND": 0,
+    "FEATURE_DEV": 0,
+    "INTEGRATIONS": 0,
+    "TESTING": 0,
+    "POLISH": 0,
+    "COMPLETE": 0
+  },
+  "messageLog": [],
+  "lastHeartbeat": "2026-03-28T00:00:00.000Z",
+  "startedAt": "2026-03-28T00:00:00.000Z",
+  "errors": []
+}

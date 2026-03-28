@@ -1,0 +1,71 @@
+# ============================================================================
+# Emlak CRM - Frontend Dockerfile
+# Multi-stage build: Next.js standalone output
+# ============================================================================
+
+# --------------------------------------------------------------------------
+# Stage 1: Dependencies - Bagimliliklari yukle
+# --------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+
+RUN npm ci
+
+# --------------------------------------------------------------------------
+# Stage 2: Build - Next.js derle
+# --------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json ./
+COPY src/frontend ./src/frontend
+
+# Next.js standalone output icin env
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build
+WORKDIR /app/src/frontend
+RUN npx next build
+
+# --------------------------------------------------------------------------
+# Stage 3: Production - Standalone runner
+# --------------------------------------------------------------------------
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Guvenlik: non-root kullanici
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Timezone
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Europe/Istanbul /etc/localtime && \
+    echo "Europe/Istanbul" > /etc/timezone
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV TZ=Europe/Istanbul
+
+# Next.js standalone build ciktisini kopyala
+COPY --from=builder /app/src/frontend/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/src/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/src/frontend/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+CMD ["node", "server.js"]

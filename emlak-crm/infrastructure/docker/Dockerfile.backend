@@ -1,0 +1,98 @@
+# ============================================================================
+# Emlak CRM - Backend Dockerfile
+# Multi-stage build: TypeScript derleme + Production image
+# ============================================================================
+
+# --------------------------------------------------------------------------
+# Stage 1: Dependencies - Bagimliliklari yukle
+# --------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# package.json ve lock dosyasini kopyala
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
+
+# Sadece production dependencies yukle
+RUN npm ci --omit=dev && \
+    npx prisma generate
+
+# Dev dependencies ayri yukle (build icin gerekli)
+FROM node:20-alpine AS dev-deps
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma/
+
+RUN npm ci && \
+    npx prisma generate
+
+# --------------------------------------------------------------------------
+# Stage 2: Build - TypeScript derle
+# --------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Dev dependencies ile build
+COPY --from=dev-deps /app/node_modules ./node_modules
+COPY --from=dev-deps /app/prisma ./prisma
+
+# Kaynak kodlari kopyala
+COPY tsconfig.json ./
+COPY src/backend ./src/backend
+COPY src/shared ./src/shared
+COPY agents ./agents
+
+# TypeScript compile
+RUN npx tsc --outDir dist
+
+# --------------------------------------------------------------------------
+# Stage 3: Production - Slim image
+# --------------------------------------------------------------------------
+FROM node:20-alpine AS runner
+
+# Guvenlik: non-root kullanici
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 emlakcrm
+
+WORKDIR /app
+
+# Timezone ayari (Europe/Istanbul)
+RUN apk add --no-cache tzdata && \
+    cp /usr/share/zoneinfo/Europe/Istanbul /etc/localtime && \
+    echo "Europe/Istanbul" > /etc/timezone
+
+# Production dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/prisma ./prisma
+
+# Build ciktisi
+COPY --from=builder /app/dist ./dist
+
+# package.json (version bilgisi icin)
+COPY package.json ./
+
+# Upload dizini olustur
+RUN mkdir -p /app/uploads /app/logs && \
+    chown -R emlakcrm:nodejs /app/uploads /app/logs
+
+# Non-root kullanici olarak calistir
+USER emlakcrm
+
+# Port
+EXPOSE 3001
+
+# Environment
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV TZ=Europe/Istanbul
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
+
+# Baslat
+CMD ["node", "dist/src/backend/server.js"]

@@ -1,0 +1,142 @@
+{
+  "categories": [
+    {
+      "category": "Ic Ozellikler",
+      "features": [
+        { "nameTr": "Asansor", "nameEn": "Elevator" },
+        { "nameTr": "Ebeveyn Banyosu", "nameEn": "Master Bathroom" },
+        { "nameTr": "Giyinme Odasi", "nameEn": "Dressing Room" },
+        { "nameTr": "Amerikan Mutfak", "nameEn": "Open Kitchen" },
+        { "nameTr": "Ankastre Mutfak", "nameEn": "Built-in Kitchen" },
+        { "nameTr": "Jakuzi", "nameEn": "Jacuzzi" },
+        { "nameTr": "Kuvet", "nameEn": "Bathtub" },
+        { "nameTr": "Dusakabin", "nameEn": "Shower Cabin" },
+        { "nameTr": "Alaturka Tuvalet", "nameEn": "Turkish Style Toilet" },
+        { "nameTr": "Isik Yalitimi", "nameEn": "Light Insulation" },
+        { "nameTr": "Ses Yalitimi", "nameEn": "Sound Insulation" },
+        { "nameTr": "Isi Yalitimi", "nameEn": "Heat Insulation" },
+        { "nameTr": "Su Yalitimi", "nameEn": "Water Insulation" },
+        { "nameTr": "Celik Kapi", "nameEn": "Steel Door" },
+        { "nameTr": "Laminat Zemin", "nameEn": "Laminate Floor" },
+        { "nameTr": "Parke Zemin", "nameEn": "Parquet Floor" },
+        { "nameTr": "Seramik Zemin", "nameEn": "Ceramic Floor" },
+        { "nameTr": "Marley Zemin", "nameEn": "Marble Floor" },
+        { "nameTr": "Hilton Banyo", "nameEn": "Full Bathroom" },
+        { "nameTr": "Vestiyer", "nameEn": "Coat Closet" },
+        { "nameTr": "Kartonpiyer", "nameEn": "Crown Molding" },
+        { "nameTr": "Spot Aydinlatma", "nameEn": "Spot Lighting" },
+        { "nameTr": "Gomme Dolap", "nameEn": "Built-in Closet" },
+        { "nameTr": "Beyaz Esya", "nameEn": "White Goods" },
+        { "nameTr": "Mobilyali", "nameEn": "Furnished" },
+        { "nameTr": "Klima", "nameEn": "Air Conditioning" },
+        { "nameTr": "Somineli", "nameEn": "Fireplace" },
+        { "nameTr": "Panjur", "nameEn": "Shutters" },
+        { "nameTr": "Stor Perde", "nameEn": "Roller Blinds" }
+      ]
+    },
+    {
+      "category": "Dis Ozellikler",
+      "features": [
+        { "nameTr": "Otopark (Acik)", "nameEn": "Parking (Open)" },
+        { "nameTr": "Otopark (Kapali)", "nameEn": "Parking (Covered)" },
+        { "nameTr": "Yuzme Havuzu", "nameEn": "Swimming Pool" },
+        { "nameTr": "Yuzme Havuzu (Kapali)", "nameEn": "Indoor Swimming Pool" },
+        { "nameTr": "Balkon", "nameEn": "Balcony" },
+        { "nameTr": "Teras", "nameEn": "Terrace" },
+        { "nameTr": "Bahce", "nameEn": "Garden" },
+        { "nameTr": "Bahce Kati", "nameEn": "Garden Floor" },
+        { "nameTr": "Garaj", "nameEn": "Garage" },
+        { "nameTr": "Cocuk Parki", "nameEn": "Playground" },
+        { "nameTr": "Basketbol Sahasi", "nameEn": "Basketball Court" },
+        { "nameTr": "Tenis Kortu", "nameEn": "Tennis Court" },
+        { "nameTr": "Mangal Alani", "nameEn": "BBQ Area" },
+        { "nameTr": "Oturma Alani", "nameEn": "Seating Area" },
+        { "nameTr": "Yuruyus Yolu", "nameEn": "Walking Path" }
+      ]
+    },
+    {
+      "category": "Bina Ozellikleri",
+      "features": [
+        { "nameTr": "Guvenlik", "nameEn": "Security" },
+        { "nameTr": "Guvenlik Kamerasi", "nameEn": "Security Camera" },
+        { "nameTr": "Kapici", "nameEn": "Doorman" },
+        { "nameTr": "Jenerator", "nameEn": "Generator" },
+        { "nameTr": "Yangin Merdiveni", "nameEn": "Fire Escape" },
+        { "nameTr": "Yangin Algilama", "nameEn": "Fire Detection" },
+        { "nameTr": "Hidrofor", "nameEn": "Hydrophor" },
+        { "nameTr": "Su Deposu", "nameEn": "Water Tank" },
+        { "nameTr": "Otomasyon", "nameEn": "Automation" },
+        { "nameTr": "Satilik Depo", "nameEn": "Storage Room" },
+        { "nameTr": "Sauna", "nameEn": "Sauna" },
+        { "nameTr": "Spor Salonu", "nameEn": "Gym" },
+        { "nameTr": "Toplanti Odasi", "nameEn": "Meeting Room" },
+        { "nameTr": "Cafe / Restoran", "nameEn": "Cafe / Restaurant" },
+        { "nameTr": "Market", "nameEn": "Mini Market" },
+        { "nameTr": "Kreş", "nameEn": "Nursery" },
+        { "nameTr": "Isitma Sistemi", "nameEn": "Heating System" },
+        { "nameTr": "Engelli Erisimi", "nameEn": "Disabled Access" }
+      ]
+    },
+    {
+      "category": "Muhit",
+      "features": [
+        { "nameTr": "Alisveris Merkezi", "nameEn": "Shopping Mall" },
+        { "nameTr": "Hastane", "nameEn": "Hospital" },
+        { "nameTr": "Eczane", "nameEn": "Pharmacy" },
+        { "nameTr": "Okul", "nameEn": "School" },
+        { "nameTr": "Universite", "nameEn": "University" },
+        { "nameTr": "Cami", "nameEn": "Mosque" },
+        { "nameTr": "Park", "nameEn": "Park" },
+        { "nameTr": "Pazar", "nameEn": "Market" },
+        { "nameTr": "Spor Alani", "nameEn": "Sports Field" },
+        { "nameTr": "Saglik Ocagi", "nameEn": "Health Center" },
+        { "nameTr": "Banka", "nameEn": "Bank" },
+        { "nameTr": "PTT", "nameEn": "Post Office" }
+      ]
+    },
+    {
+      "category": "Ulasim",
+      "features": [
+        { "nameTr": "Metro", "nameEn": "Metro" },
+        { "nameTr": "Metrobus", "nameEn": "Metrobus" },
+        { "nameTr": "Tramvay", "nameEn": "Tram" },
+        { "nameTr": "Otobus Duragi", "nameEn": "Bus Stop" },
+        { "nameTr": "Dolmus Duragi", "nameEn": "Dolmus Stop" },
+        { "nameTr": "Minibus", "nameEn": "Minibus" },
+        { "nameTr": "Deniz Otobüsü", "nameEn": "Sea Bus" },
+        { "nameTr": "Vapur", "nameEn": "Ferry" },
+        { "nameTr": "Sahil", "nameEn": "Shore" },
+        { "nameTr": "E-5 Yakin", "nameEn": "Near E-5 Highway" },
+        { "nameTr": "TEM Yakin", "nameEn": "Near TEM Highway" },
+        { "nameTr": "Havalimani Yakin", "nameEn": "Near Airport" },
+        { "nameTr": "Marmaray", "nameEn": "Marmaray" }
+      ]
+    },
+    {
+      "category": "Manzara",
+      "features": [
+        { "nameTr": "Deniz Manzarasi", "nameEn": "Sea View" },
+        { "nameTr": "Bogaz Manzarasi", "nameEn": "Bosphorus View" },
+        { "nameTr": "Gol Manzarasi", "nameEn": "Lake View" },
+        { "nameTr": "Dag Manzarasi", "nameEn": "Mountain View" },
+        { "nameTr": "Sehir Manzarasi", "nameEn": "City View" },
+        { "nameTr": "Doga Manzarasi", "nameEn": "Nature View" },
+        { "nameTr": "Havuz Manzarasi", "nameEn": "Pool View" },
+        { "nameTr": "Park Manzarasi", "nameEn": "Park View" }
+      ]
+    },
+    {
+      "category": "Altyapi",
+      "features": [
+        { "nameTr": "Dogalgaz", "nameEn": "Natural Gas" },
+        { "nameTr": "Sehir Suyu", "nameEn": "City Water" },
+        { "nameTr": "Kanalizasyon", "nameEn": "Sewerage" },
+        { "nameTr": "Fiber Internet", "nameEn": "Fiber Internet" },
+        { "nameTr": "Uydu", "nameEn": "Satellite" },
+        { "nameTr": "Telefon Hatti", "nameEn": "Phone Line" },
+        { "nameTr": "Gunes Enerjisi", "nameEn": "Solar Energy" },
+        { "nameTr": "Aritma Sistemi", "nameEn": "Water Treatment" }
+      ]
+    }
+  ]
+}
