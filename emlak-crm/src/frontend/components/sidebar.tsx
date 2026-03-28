@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  CheckSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore, useAuthStore } from "@/lib/store";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/musteriler", label: "Musteriler", icon: Users },
   { href: "/ilanlar", label: "Ilanlar", icon: Building2 },
   { href: "/satislar", label: "Satislar", icon: HandshakeIcon },
+  { href: "/gorevler", label: "Gorevler", icon: CheckSquare },
   { href: "/takvim", label: "Takvim", icon: Calendar },
   { href: "/mesajlar", label: "Mesajlar", icon: MessageSquare },
   { href: "/portallar", label: "Portallar", icon: Globe },

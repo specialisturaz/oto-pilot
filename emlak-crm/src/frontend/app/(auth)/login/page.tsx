@@ -30,7 +30,7 @@ export default function LoginPage() {
   const { login } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isQuickLoading, setIsQuickLoading] = useState(false);
+  const [isQuickLoading, setIsQuickLoading] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,15 +69,22 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = async () => {
-    setIsQuickLoading(true);
+  const demoUsers = [
+    { email: "admin@emlakcrm.com", name: "Admin Yonetici", role: "ADMIN", color: "bg-red-500" },
+    { email: "fatma.demir@emlakcrm.com", name: "Fatma Demir", role: "YONETICI", color: "bg-blue-500" },
+    { email: "mehmet.kaya@emlakcrm.com", name: "Mehmet Kaya", role: "DANISMAN", color: "bg-green-500" },
+    { email: "ayse.yilmaz@emlakcrm.com", name: "Ayse Yilmaz", role: "DANISMAN", color: "bg-purple-500" },
+  ];
+
+  const handleQuickLogin = async (email: string) => {
+    setIsQuickLoading(email);
     setError(null);
     try {
-      await doLogin("admin@emlakcrm.com", "password123");
+      await doLogin(email, "password123");
     } catch (err: any) {
       setError("Hizli giris basarisiz. Backend calisiyor mu?");
     } finally {
-      setIsQuickLoading(false);
+      setIsQuickLoading(null);
     }
   };
 
@@ -207,23 +214,32 @@ export default function LoginPage() {
               </Button>
 
               {/* Quick Login for Testing */}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-dashed"
-                size="lg"
-                disabled={isLoading || isQuickLoading}
-                onClick={handleQuickLogin}
-              >
-                {isQuickLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    Giris yapiliyor...
-                  </span>
-                ) : (
-                  "Demo Hesap ile Hizli Giris"
-                )}
-              </Button>
+              <div className="space-y-2">
+                <p className="text-xs text-center text-muted-foreground">Hizli Giris (Test)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {demoUsers.map((u) => (
+                    <Button
+                      key={u.email}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-2 px-3 flex flex-col items-center gap-0.5 border-dashed text-xs"
+                      disabled={isLoading || !!isQuickLoading}
+                      onClick={() => handleQuickLogin(u.email)}
+                    >
+                      {isQuickLoading === u.email ? (
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <>
+                          <span className={`inline-block h-2 w-2 rounded-full ${u.color}`} />
+                          <span className="font-medium">{u.name}</span>
+                          <span className="text-muted-foreground text-[10px]">{u.role}</span>
+                        </>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
               {/* Forgot Password */}
               <div className="text-center">
