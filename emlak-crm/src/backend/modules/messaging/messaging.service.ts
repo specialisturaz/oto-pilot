@@ -27,6 +27,32 @@ const CONVERSATION_INCLUDE = {
   },
 } as const;
 
+/**
+ * Check whether external API keys are configured for a given channel.
+ * Returns true if keys are present, false otherwise.
+ */
+function isChannelConfigured(channel: string): boolean {
+  switch (channel) {
+    case 'WHATSAPP':
+      return !!(
+        process.env.WHATSAPP_API_TOKEN &&
+        process.env.WHATSAPP_PHONE_NUMBER_ID
+      );
+    case 'SMS':
+      return !!(
+        process.env.NETGSM_USERCODE &&
+        process.env.NETGSM_PASSWORD
+      );
+    case 'EMAIL':
+      return !!(
+        process.env.SMTP_HOST &&
+        process.env.SMTP_USER
+      );
+    default:
+      return false;
+  }
+}
+
 export class MessagingService {
   /**
    * List conversations with filtering and pagination (office-scoped).
@@ -190,6 +216,12 @@ export class MessagingService {
 
   /**
    * Send a message. Routes to the correct channel (WhatsApp/SMS/Email/Internal).
+   *
+   * DUAL-MODE LOGIC:
+   * - INTERNAL channel: always saved to DB only, no external API needed.
+   * - WHATSAPP / SMS / EMAIL: if API keys are configured, attempt external delivery.
+   *   If keys are NOT configured, save to DB as internal delivery and return success
+   *   with a note. Never throw an error because of missing API keys.
    */
   async sendMessage(data: SendMessageInput, user: AuthenticatedUser) {
     if (!user.officeId) {
@@ -249,38 +281,51 @@ export class MessagingService {
     // Route message to the appropriate channel
     let externalMessageId: string | null = null;
     let messageStatus: 'SENT' | 'FAILED' = 'SENT';
+    let deliveryNote: string | null = null;
 
-    try {
-      switch (data.channel) {
-        case 'WHATSAPP':
-          externalMessageId = await this.sendWhatsAppMessage(
-            conversation.contact.phone!,
-            data.content,
-            data.media_url || undefined
-          );
-          break;
-        case 'SMS':
-          externalMessageId = await this.sendSmsMessage(
-            conversation.contact.phone!,
-            data.content
-          );
-          break;
-        case 'EMAIL':
-          externalMessageId = await this.sendEmailMessage(
-            conversation.contact.email!,
-            data.content
-          );
-          break;
-        case 'INTERNAL':
-          // Internal messages don't need external routing
-          break;
+    if (data.channel === 'INTERNAL') {
+      // Internal messages: just save to DB, no external API call needed
+      messageStatus = 'SENT';
+    } else if (!isChannelConfigured(data.channel)) {
+      // External channel requested but API keys not configured
+      // Save as internal delivery with a note instead of throwing an error
+      messageStatus = 'SENT';
+      deliveryNote = `${data.channel} API anahtarlari yapilandirilmamis. Mesaj dahili olarak kaydedildi.`;
+      logger.info(
+        `${data.channel} API anahtarlari yapilandirilmamis - mesaj dahili olarak kaydedildi (konusma: ${conversationId})`
+      );
+    } else {
+      // External channel with keys configured: attempt external delivery
+      try {
+        switch (data.channel) {
+          case 'WHATSAPP':
+            externalMessageId = await this.sendWhatsAppMessage(
+              conversation.contact.phone!,
+              data.content,
+              data.media_url || undefined
+            );
+            break;
+          case 'SMS':
+            externalMessageId = await this.sendSmsMessage(
+              conversation.contact.phone!,
+              data.content
+            );
+            break;
+          case 'EMAIL':
+            externalMessageId = await this.sendEmailMessage(
+              conversation.contact.email!,
+              data.content
+            );
+            break;
+        }
+      } catch (error) {
+        logger.error(`Mesaj gonderilemedi (${data.channel}):`, error);
+        messageStatus = 'FAILED';
+        deliveryNote = `${data.channel} ile gonderim basarisiz oldu. Mesaj veritabanina kaydedildi.`;
       }
-    } catch (error) {
-      logger.error(`Mesaj gonderilemedi (${data.channel}):`, error);
-      messageStatus = 'FAILED';
     }
 
-    // Save message to database
+    // ALWAYS save message to database regardless of channel or delivery status
     const message = await prisma.message.create({
       data: {
         officeId: user.officeId,
@@ -307,7 +352,10 @@ export class MessagingService {
 
     logger.info(`Mesaj gonderildi: ${message.id} (${data.channel})`);
 
-    return message;
+    return {
+      ...message,
+      ...(deliveryNote ? { deliveryNote } : {}),
+    };
   }
 
   /**

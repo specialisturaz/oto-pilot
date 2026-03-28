@@ -136,9 +136,24 @@ const roleDisplayMap: Record<string, string> = {
   SECRETARY: "Sekreter",
 };
 
+interface MessagingChannelConfig {
+  whatsappApiToken: string;
+  whatsappPhoneNumberId: string;
+  whatsappWebhookVerifyToken: string;
+  netgsmUsercode: string;
+  netgsmPassword: string;
+  netgsmSender: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpUser: string;
+  smtpPassword: string;
+  smtpFrom: string;
+}
+
 const tabItems = [
   { id: "ofis", label: "Ofis Bilgileri", icon: Building2 },
   { id: "kullanicilar", label: "Kullanicilar", icon: Users },
+  { id: "mesajlasma", label: "Mesajlasma Ayarlari", icon: MessageSquare },
   { id: "portal", label: "Portal Ayarlari", icon: Globe },
   { id: "sablonlar", label: "Mesaj Sablonlari", icon: MessageSquare },
   { id: "bildirimler", label: "Bildirimler", icon: Bell },
@@ -192,6 +207,22 @@ export default function AyarlarPage() {
   });
   const [deleteExpiredDialogOpen, setDeleteExpiredDialogOpen] = useState(false);
 
+  // Messaging channel config state
+  const [msgConfig, setMsgConfig] = useState<MessagingChannelConfig>({
+    whatsappApiToken: "",
+    whatsappPhoneNumberId: "",
+    whatsappWebhookVerifyToken: "",
+    netgsmUsercode: "",
+    netgsmPassword: "",
+    netgsmSender: "",
+    smtpHost: "",
+    smtpPort: "587",
+    smtpUser: "",
+    smtpPassword: "",
+    smtpFrom: "",
+  });
+  const [msgTestResults, setMsgTestResults] = useState<Record<string, "success" | "error" | "loading">>({});
+
   const showError = useCallback((msg: string) => {
     setError(msg);
     setTimeout(() => setError(null), 4000);
@@ -232,6 +263,66 @@ export default function AyarlarPage() {
     onSuccess: () => showSuccess("Ofis bilgileri kaydedildi."),
     onError: () => showError("Ofis bilgileri kaydedilemedi."),
   });
+
+  // ─── Messaging Config API ──────────────────────────────
+  const { isLoading: msgConfigLoading } = useQuery({
+    queryKey: ["messaging-config"],
+    queryFn: async () => {
+      try {
+        const res = await api.get("/api/v1/settings/messaging");
+        const d = res.data?.data || res.data;
+        if (d) {
+          setMsgConfig((prev) => ({
+            ...prev,
+            whatsappApiToken: d.whatsappApiToken || d.whatsapp_api_token || "",
+            whatsappPhoneNumberId: d.whatsappPhoneNumberId || d.whatsapp_phone_number_id || "",
+            whatsappWebhookVerifyToken: d.whatsappWebhookVerifyToken || d.whatsapp_webhook_verify_token || "",
+            netgsmUsercode: d.netgsmUsercode || d.netgsm_usercode || "",
+            netgsmPassword: d.netgsmPassword || d.netgsm_password || "",
+            netgsmSender: d.netgsmSender || d.netgsm_sender || "",
+            smtpHost: d.smtpHost || d.smtp_host || "",
+            smtpPort: d.smtpPort || d.smtp_port || "587",
+            smtpUser: d.smtpUser || d.smtp_user || "",
+            smtpPassword: d.smtpPassword || d.smtp_password || "",
+            smtpFrom: d.smtpFrom || d.smtp_from || "",
+          }));
+        }
+        return d;
+      } catch {
+        return null;
+      }
+    },
+    retry: 0,
+  });
+
+  const saveMsgConfigMutation = useMutation({
+    mutationFn: async () => {
+      await api.put("/api/v1/settings/messaging", msgConfig);
+    },
+    onSuccess: () => showSuccess("Mesajlasma ayarlari kaydedildi."),
+    onError: () => showError("Mesajlasma ayarlari kaydedilemedi."),
+  });
+
+  const handleMsgChannelTest = useCallback(async (channel: string) => {
+    setMsgTestResults((prev) => ({ ...prev, [channel]: "loading" }));
+    try {
+      await api.post("/api/v1/settings/messaging/test", { channel });
+      setMsgTestResults((prev) => ({ ...prev, [channel]: "success" }));
+    } catch {
+      setMsgTestResults((prev) => ({ ...prev, [channel]: "error" }));
+    }
+    setTimeout(() => {
+      setMsgTestResults((prev) => {
+        const next = { ...prev };
+        delete next[channel];
+        return next;
+      });
+    }, 5000);
+  }, []);
+
+  const isWhatsappConfigured = !!(msgConfig.whatsappApiToken && msgConfig.whatsappPhoneNumberId);
+  const isSmsConfigured = !!(msgConfig.netgsmUsercode && msgConfig.netgsmPassword);
+  const isEmailConfigured = !!(msgConfig.smtpHost && msgConfig.smtpUser);
 
   // ─── Users API ────────────────────────────────────────
   const { data: usersData, isLoading: usersLoading, isError: usersError } = useQuery({
@@ -837,6 +928,284 @@ export default function AyarlarPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Mesajlasma Ayarlari Tab */}
+        <TabsContent value="mesajlasma">
+          <div className="space-y-4">
+            {/* Internal messaging info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Dahili Mesajlasma</CardTitle>
+                <CardDescription>
+                  CRM ici dahili mesajlasma sistemi her zaman aktiftir. Hicbir yapilandirma gerektirmez.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-emerald-800">Aktif</p>
+                    <p className="text-xs text-emerald-600">
+                      Dahili mesajlasma sistemi her zaman aktiftir. Mesajlar sayfasindan musterilerinize dahili mesaj gonderebilirsiniz.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* WhatsApp Config */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">WhatsApp Business API</CardTitle>
+                    <CardDescription>
+                      WhatsApp uzerinden mesaj gonderebilmek icin Meta Business API bilgilerinizi girin
+                    </CardDescription>
+                  </div>
+                  <Badge className={isWhatsappConfigured ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}>
+                    {isWhatsappConfigured ? "Aktif" : "Yapilandirilmamis"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-sm text-foreground">Kurulum Adimlari:</p>
+                    <p>1. Meta Business Suite'e gidin: business.facebook.com</p>
+                    <p>2. WhatsApp Business hesabi olusturun veya mevcut hesabiniza baglatin</p>
+                    <p>3. WhatsApp API &gt; Baslangic bolumunden API Token'inizi alin</p>
+                    <p>4. Telefon Numarasi ID'sini not edin</p>
+                    <p>5. Webhook URL olarak CRM adresinizi ekleyin</p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">API Token</label>
+                      <Input
+                        type="password"
+                        placeholder="EAAxxxxxxx..."
+                        value={msgConfig.whatsappApiToken}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, whatsappApiToken: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Telefon Numarasi ID</label>
+                      <Input
+                        placeholder="1234567890"
+                        value={msgConfig.whatsappPhoneNumberId}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, whatsappPhoneNumberId: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <label className="text-sm font-medium">Webhook Dogrulama Tokeni</label>
+                      <Input
+                        placeholder="emlak_crm_webhook"
+                        value={msgConfig.whatsappWebhookVerifyToken}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, whatsappWebhookVerifyToken: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!isWhatsappConfigured || msgTestResults["whatsapp"] === "loading"}
+                      onClick={() => handleMsgChannelTest("whatsapp")}
+                    >
+                      {msgTestResults["whatsapp"] === "loading" ? (
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <TestTube2 className="mr-2 h-3.5 w-3.5" />
+                      )}
+                      Test Baglantisi
+                    </Button>
+                    {msgTestResults["whatsapp"] === "success" && (
+                      <span className="text-xs text-emerald-600 font-medium">Baglanti basarili!</span>
+                    )}
+                    {msgTestResults["whatsapp"] === "error" && (
+                      <span className="text-xs text-red-600 font-medium">Baglanti basarisiz</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* SMS (Netgsm) Config */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">SMS - Netgsm</CardTitle>
+                    <CardDescription>
+                      SMS gondermek icin Netgsm hesap bilgilerinizi girin
+                    </CardDescription>
+                  </div>
+                  <Badge className={isSmsConfigured ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}>
+                    {isSmsConfigured ? "Aktif" : "Yapilandirilmamis"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-sm text-foreground">Kurulum Adimlari:</p>
+                    <p>1. Netgsm.com.tr adresine giderek hesap olusturun</p>
+                    <p>2. Hesap ayarlarindan API kullanici kodunuzu ve sifrenizi alin</p>
+                    <p>3. Baslik (Sender ID) tanimlayin ve onaylatín</p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Kullanici Kodu</label>
+                      <Input
+                        placeholder="850xxxxxxx"
+                        value={msgConfig.netgsmUsercode}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, netgsmUsercode: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sifre</label>
+                      <Input
+                        type="password"
+                        placeholder="API Sifresi"
+                        value={msgConfig.netgsmPassword}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, netgsmPassword: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Baslik (Sender ID)</label>
+                      <Input
+                        placeholder="EMLAKCRM"
+                        value={msgConfig.netgsmSender}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, netgsmSender: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!isSmsConfigured || msgTestResults["sms"] === "loading"}
+                      onClick={() => handleMsgChannelTest("sms")}
+                    >
+                      {msgTestResults["sms"] === "loading" ? (
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <TestTube2 className="mr-2 h-3.5 w-3.5" />
+                      )}
+                      Test Baglantisi
+                    </Button>
+                    {msgTestResults["sms"] === "success" && (
+                      <span className="text-xs text-emerald-600 font-medium">Baglanti basarili!</span>
+                    )}
+                    {msgTestResults["sms"] === "error" && (
+                      <span className="text-xs text-red-600 font-medium">Baglanti basarisiz</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Email SMTP Config */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">E-posta - SMTP</CardTitle>
+                    <CardDescription>
+                      E-posta gondermek icin SMTP sunucu bilgilerinizi girin
+                    </CardDescription>
+                  </div>
+                  <Badge className={isEmailConfigured ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}>
+                    {isEmailConfigured ? "Aktif" : "Yapilandirilmamis"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
+                    <p className="font-medium text-sm text-foreground">Kurulum Adimlari:</p>
+                    <p>1. E-posta saglayicinizin SMTP ayarlarini ogrenmek icin destek sayfasini ziyaret edin</p>
+                    <p>2. Gmail icin: smtp.gmail.com, Port: 587 (Uygulama Sifresi gereklidir)</p>
+                    <p>3. Yandex icin: smtp.yandex.com, Port: 587</p>
+                    <p>4. Ofis e-posta adresinizi "Gonderen Adresi" alanina girin</p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">SMTP Sunucu</label>
+                      <Input
+                        placeholder="smtp.gmail.com"
+                        value={msgConfig.smtpHost}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, smtpHost: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Port</label>
+                      <Input
+                        placeholder="587"
+                        value={msgConfig.smtpPort}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, smtpPort: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Kullanici Adi</label>
+                      <Input
+                        placeholder="info@emlakcrm.com"
+                        value={msgConfig.smtpUser}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, smtpUser: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Sifre</label>
+                      <Input
+                        type="password"
+                        placeholder="SMTP Sifresi"
+                        value={msgConfig.smtpPassword}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, smtpPassword: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <label className="text-sm font-medium">Gonderen Adresi</label>
+                      <Input
+                        placeholder="info@emlakcrm.com"
+                        value={msgConfig.smtpFrom}
+                        onChange={(e) => setMsgConfig({ ...msgConfig, smtpFrom: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!isEmailConfigured || msgTestResults["email"] === "loading"}
+                      onClick={() => handleMsgChannelTest("email")}
+                    >
+                      {msgTestResults["email"] === "loading" ? (
+                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <TestTube2 className="mr-2 h-3.5 w-3.5" />
+                      )}
+                      Test Baglantisi
+                    </Button>
+                    {msgTestResults["email"] === "success" && (
+                      <span className="text-xs text-emerald-600 font-medium">Baglanti basarili!</span>
+                    )}
+                    {msgTestResults["email"] === "error" && (
+                      <span className="text-xs text-red-600 font-medium">Baglanti basarisiz</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Save all messaging settings */}
+            <div className="flex justify-end">
+              <Button onClick={() => saveMsgConfigMutation.mutate()} disabled={saveMsgConfigMutation.isPending}>
+                {saveMsgConfigMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Tum Mesajlasma Ayarlarini Kaydet
+              </Button>
+            </div>
+          </div>
         </TabsContent>
 
         {/* Portal Ayarlari Tab */}

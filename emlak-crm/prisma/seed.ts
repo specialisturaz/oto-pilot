@@ -545,6 +545,211 @@ async function seedSampleDeals(
 }
 
 // ---------------------------------------------------------------------------
+// Sample Conversations & Messages - Ornek Konusmalar ve Mesajlar
+// ---------------------------------------------------------------------------
+async function seedSampleConversations(
+  officeId: string,
+  adminId: string,
+  contactIds: string[]
+): Promise<void> {
+  console.log("💬 Ornek konusmalar ve mesajlar olusturuluyor...");
+
+  const now = new Date();
+
+  // Conversation 1: Ali Ozturk - INTERNAL
+  const conv1 = await prisma.conversation.create({
+    data: {
+      officeId,
+      contactId: contactIds[0], // Ali Ozturk
+      assignedUserId: adminId,
+      channel: "INTERNAL",
+      status: "OPEN",
+      lastMessageAt: new Date(now.getTime() - 10 * 60 * 1000), // 10 dk once
+      unreadCount: 1,
+    },
+  });
+
+  const conv1Messages = [
+    {
+      officeId,
+      conversationId: conv1.id,
+      senderType: "USER",
+      senderId: adminId,
+      channel: "INTERNAL",
+      content: "Merhaba Ali Bey, Kadikoy 3+1 daire ile ilgili bilgi vermek istiyorum.",
+      status: "SENT",
+      createdAt: new Date(now.getTime() - 60 * 60 * 1000), // 1 saat once
+    },
+    {
+      officeId,
+      conversationId: conv1.id,
+      senderType: "CONTACT",
+      senderId: contactIds[0],
+      channel: "INTERNAL",
+      content: "Merhaba, tesekkurler. Dairenin fiyati ne kadar?",
+      status: "DELIVERED",
+      createdAt: new Date(now.getTime() - 55 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv1.id,
+      senderType: "USER",
+      senderId: adminId,
+      channel: "INTERNAL",
+      content: "Daire 145 m2, 3+1, 5. katta. Fiyati 4.500.000 TL. Deniz manzarali.",
+      status: "SENT",
+      createdAt: new Date(now.getTime() - 50 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv1.id,
+      senderType: "CONTACT",
+      senderId: contactIds[0],
+      channel: "INTERNAL",
+      content: "Guzel, yerinde gormek istiyorum. Yarin uygun musunuz?",
+      status: "DELIVERED",
+      createdAt: new Date(now.getTime() - 10 * 60 * 1000),
+    },
+  ];
+
+  for (const msg of conv1Messages) {
+    await prisma.message.create({ data: msg });
+  }
+
+  // Conversation 2: Zeynep Arslan - INTERNAL
+  const conv2 = await prisma.conversation.create({
+    data: {
+      officeId,
+      contactId: contactIds[1], // Zeynep Arslan
+      assignedUserId: adminId,
+      channel: "INTERNAL",
+      status: "OPEN",
+      lastMessageAt: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2 saat once
+      unreadCount: 0,
+    },
+  });
+
+  const conv2Messages = [
+    {
+      officeId,
+      conversationId: conv2.id,
+      senderType: "CONTACT",
+      senderId: contactIds[1],
+      channel: "INTERNAL",
+      content: "Merhaba, Besiktas'taki 4+1 dairemi satmak istiyorum. Degerlemesini yapabilir misiniz?",
+      status: "DELIVERED",
+      createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv2.id,
+      senderType: "USER",
+      senderId: adminId,
+      channel: "INTERNAL",
+      content: "Merhaba Zeynep Hanim, tabii ki. Dairenin adresini ve metrekaresini paylasabilir misiniz?",
+      status: "SENT",
+      createdAt: new Date(now.getTime() - 4.5 * 60 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv2.id,
+      senderType: "CONTACT",
+      senderId: contactIds[1],
+      channel: "INTERNAL",
+      content: "Besiktas Levent Mah. 180 m2, 4+1, 7. kat. Asansorlu ve otopark var.",
+      status: "DELIVERED",
+      createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv2.id,
+      senderType: "USER",
+      senderId: adminId,
+      channel: "INTERNAL",
+      content: "Tesekkurler, bolge ve ozelliklerine gore on degerleme yapalim. Bu hafta icinde sizinle paylasacagim.",
+      status: "SENT",
+      createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+    },
+  ];
+
+  for (const msg of conv2Messages) {
+    await prisma.message.create({ data: msg });
+  }
+
+  // Conversation 3: Elif Celik - INTERNAL
+  const conv3 = await prisma.conversation.create({
+    data: {
+      officeId,
+      contactId: contactIds[3], // Elif Celik
+      assignedUserId: adminId,
+      channel: "INTERNAL",
+      status: "OPEN",
+      lastMessageAt: new Date(now.getTime() - 24 * 60 * 60 * 1000), // 1 gun once
+      unreadCount: 2,
+    },
+  });
+
+  const conv3Messages = [
+    {
+      officeId,
+      conversationId: conv3.id,
+      senderType: "USER",
+      senderId: adminId,
+      channel: "INTERNAL",
+      content: "Elif Hanim merhaba, Sisli bolgede 2+1 kiralik daireler icin birkaC secenek buldum.",
+      status: "SENT",
+      createdAt: new Date(now.getTime() - 48 * 60 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv3.id,
+      senderType: "CONTACT",
+      senderId: contactIds[3],
+      channel: "INTERNAL",
+      content: "Harika! Fiyatlari ve lokasyonlari paylasabilir misiniz?",
+      status: "DELIVERED",
+      createdAt: new Date(now.getTime() - 47 * 60 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv3.id,
+      senderType: "USER",
+      senderId: adminId,
+      channel: "INTERNAL",
+      content: "1) Mecidiyekoy, 90m2, 22.000 TL/ay\n2) Osmanbey, 75m2, 18.000 TL/ay\n3) Nisantasi, 85m2, 25.000 TL/ay",
+      status: "SENT",
+      createdAt: new Date(now.getTime() - 46 * 60 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv3.id,
+      senderType: "CONTACT",
+      senderId: contactIds[3],
+      channel: "INTERNAL",
+      content: "Osmanbey dairesi cok ilgimi cekti. Ne zaman gorebilirim?",
+      status: "DELIVERED",
+      createdAt: new Date(now.getTime() - 25 * 60 * 60 * 1000),
+    },
+    {
+      officeId,
+      conversationId: conv3.id,
+      senderType: "CONTACT",
+      senderId: contactIds[3],
+      channel: "INTERNAL",
+      content: "Ayrica Mecidiyekoy dairesi de olabilir, ikisini birlikte gorsek guzel olur.",
+      status: "DELIVERED",
+      createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+    },
+  ];
+
+  for (const msg of conv3Messages) {
+    await prisma.message.create({ data: msg });
+  }
+
+  console.log(`  ✓ 3 konusma ve ${conv1Messages.length + conv2Messages.length + conv3Messages.length} mesaj olusturuldu`);
+}
+
+// ---------------------------------------------------------------------------
 // Ana Seed Fonksiyonu
 // ---------------------------------------------------------------------------
 async function main(): Promise<void> {
@@ -591,6 +796,10 @@ async function main(): Promise<void> {
 
     // 8. Ornek Satis Surecleri
     await seedSampleDeals(officeId, adminId, contactIds, propertyIds);
+    console.log("");
+
+    // 9. Ornek Konusmalar ve Mesajlar
+    await seedSampleConversations(officeId, adminId, contactIds);
     console.log("");
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

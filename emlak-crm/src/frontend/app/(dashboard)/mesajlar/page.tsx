@@ -29,7 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 
-type Channel = "tumu" | "whatsapp" | "sms" | "eposta";
+type Channel = "tumu" | "INTERNAL" | "WHATSAPP" | "SMS" | "EMAIL";
 
 interface Message {
   id: string;
@@ -38,6 +38,7 @@ interface Message {
   time?: string;
   createdAt?: string;
   sent?: boolean;
+  senderType?: string;
   direction?: "outbound" | "inbound";
   read?: boolean;
   status?: string;
@@ -49,10 +50,11 @@ interface Conversation {
   contactName?: string;
   contactId?: string;
   contact_id?: string;
+  contact?: { id?: string; firstName?: string; lastName?: string; phone?: string; email?: string };
   phone?: string;
   email?: string;
   status?: string;
-  channel: "whatsapp" | "sms" | "eposta";
+  channel: string;
   last_message?: string;
   lastMessage?: string;
   last_time?: string;
@@ -64,15 +66,30 @@ interface Conversation {
 
 const channelTabs: { id: Channel; label: string }[] = [
   { id: "tumu", label: "Tumu" },
-  { id: "whatsapp", label: "WhatsApp" },
-  { id: "sms", label: "SMS" },
-  { id: "eposta", label: "E-posta" },
+  { id: "INTERNAL", label: "Dahili" },
+  { id: "WHATSAPP", label: "WhatsApp" },
+  { id: "SMS", label: "SMS" },
+  { id: "EMAIL", label: "E-posta" },
 ];
 
 const channelColors: Record<string, string> = {
+  INTERNAL: "bg-indigo-100 text-indigo-700",
+  WHATSAPP: "bg-green-100 text-green-700",
+  SMS: "bg-blue-100 text-blue-700",
+  EMAIL: "bg-purple-100 text-purple-700",
   whatsapp: "bg-green-100 text-green-700",
   sms: "bg-blue-100 text-blue-700",
   eposta: "bg-purple-100 text-purple-700",
+};
+
+const channelLabel: Record<string, string> = {
+  INTERNAL: "Dahili",
+  WHATSAPP: "WA",
+  SMS: "SMS",
+  EMAIL: "E-p",
+  whatsapp: "WA",
+  sms: "SMS",
+  eposta: "E-p",
 };
 
 // Fallback mock data when API is unavailable
@@ -162,23 +179,40 @@ const fallbackMessages: Record<string, Message[]> = {
 };
 
 function normalizeConv(c: Conversation): Conversation {
+  const contactName = c.contact_name
+    || c.contactName
+    || (c.contact ? `${c.contact.firstName || ""} ${c.contact.lastName || ""}`.trim() : "")
+    || "Bilinmeyen";
+  const phone = c.phone || c.contact?.phone || "";
+  const email = c.email || c.contact?.email || "";
+  const lastMsg = c.last_message || c.lastMessage || (c.messages && c.messages.length > 0 ? (c.messages[0].content || "") : "");
   return {
     ...c,
-    contact_name: c.contact_name || c.contactName || "Bilinmeyen",
-    last_message: c.last_message || c.lastMessage || "",
+    contact_name: contactName,
+    phone,
+    email,
+    last_message: lastMsg,
     last_time: c.last_time || (c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""),
     unread: c.unread ?? c.unreadCount ?? 0,
-    contactId: c.contactId || c.contact_id,
+    contactId: c.contactId || c.contact_id || c.contact?.id,
   };
 }
 
 function normalizeMsg(m: Message): Message {
+  const isSent = m.sent !== undefined
+    ? m.sent
+    : m.senderType === "USER"
+      ? true
+      : m.direction === "outbound";
+  const isRead = m.read !== undefined
+    ? m.read
+    : (m.status === "READ" || m.status === "read");
   return {
     ...m,
     text: m.text || m.content || "",
     time: m.time || (m.createdAt ? new Date(m.createdAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""),
-    sent: m.sent ?? m.direction === "outbound",
-    read: m.read ?? m.status === "read",
+    sent: isSent,
+    read: isRead,
   };
 }
 
@@ -231,7 +265,7 @@ export default function MesajlarPage() {
   });
 
   const apiMessages: Message[] = (
-    Array.isArray(msgData) ? msgData : msgData?.messages || []
+    Array.isArray(msgData) ? msgData : msgData?.items || msgData?.messages || []
   ).map(normalizeMsg);
 
   // Use API messages, fallback messages, or local messages
@@ -251,9 +285,9 @@ export default function MesajlarPage() {
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
       const res = await api.post("/api/v1/messaging/send", {
-        conversationId: selectedConvId,
+        conversation_id: selectedConvId,
         content,
-        channel: selectedConversation?.channel || "whatsapp",
+        channel: selectedConversation?.channel || "INTERNAL",
       });
       return res.data;
     },
@@ -333,8 +367,9 @@ export default function MesajlarPage() {
   const filteredConversations = conversations.filter((conv) => {
     const name = conv.contact_name || "";
     const lastMsg = conv.last_message || "";
+    const ch = (conv.channel || "").toUpperCase();
     const matchesChannel =
-      activeChannel === "tumu" || conv.channel === activeChannel;
+      activeChannel === "tumu" || ch === activeChannel;
     const matchesSearch =
       name.toLocaleLowerCase("tr-TR").includes(searchQuery.toLocaleLowerCase("tr-TR")) ||
       lastMsg.toLocaleLowerCase("tr-TR").includes(searchQuery.toLocaleLowerCase("tr-TR"));
@@ -462,14 +497,10 @@ export default function MesajlarPage() {
                         <Badge
                           className={cn(
                             "text-[9px] px-1.5 py-0",
-                            channelColors[conv.channel]
+                            channelColors[conv.channel] || "bg-gray-100 text-gray-700"
                           )}
                         >
-                          {conv.channel === "whatsapp"
-                            ? "WA"
-                            : conv.channel === "sms"
-                              ? "SMS"
-                              : "E-p"}
+                          {channelLabel[conv.channel] || conv.channel}
                         </Badge>
                         {(conv.unread || 0) > 0 && (
                           <Badge className="h-5 w-5 items-center justify-center rounded-full p-0 text-[10px]">
