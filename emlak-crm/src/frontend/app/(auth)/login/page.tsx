@@ -45,17 +45,17 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const response = await api.post("/api/auth/login", {
+      const response = await api.post("/api/v1/auth/login", {
         email: data.email,
         password: data.password,
       });
 
-      const { user, access_token, refresh_token } = response.data;
+      const { user, access_token, refresh_token } = response.data.data;
       login(user, access_token, refresh_token);
       router.push("/");
     } catch (err: any) {
       setError(
-        err.response?.data?.detail ||
+        err.response?.data?.error?.message ||
           "Giris yapilamadi. Lutfen bilgilerinizi kontrol ediniz."
       );
     } finally {

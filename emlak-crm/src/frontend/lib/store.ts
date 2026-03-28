@@ -5,8 +5,11 @@ import { persist } from "zustand/middleware";
 interface User {
   id: string;
   email: string;
-  full_name: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
   role: string;
+  officeId?: string;
   avatar_url?: string;
 }
 
