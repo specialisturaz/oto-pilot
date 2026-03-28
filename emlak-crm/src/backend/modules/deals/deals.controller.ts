@@ -17,7 +17,7 @@ export class DealsController {
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const deal = await dealsService.getDealById(req.params.id, req.user!);
+    const deal = await dealsService.getDealById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -37,7 +37,7 @@ export class DealsController {
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateDealInput;
-    const deal = await dealsService.updateDeal(req.params.id, data, req.user!);
+    const deal = await dealsService.updateDeal(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -47,7 +47,7 @@ export class DealsController {
 
   updateStage = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateDealStageInput;
-    const deal = await dealsService.updateDealStage(req.params.id, data, req.user!);
+    const deal = await dealsService.updateDealStage(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -56,7 +56,7 @@ export class DealsController {
   });
 
   getHistory = asyncHandler(async (req: Request, res: Response) => {
-    const history = await dealsService.getDealHistory(req.params.id, req.user!);
+    const history = await dealsService.getDealHistory(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -65,7 +65,7 @@ export class DealsController {
   });
 
   getCommissions = asyncHandler(async (req: Request, res: Response) => {
-    const commissions = await dealsService.getDealCommissions(req.params.id, req.user!);
+    const commissions = await dealsService.getDealCommissions(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,

@@ -18,7 +18,7 @@ export class MessagingController {
   });
 
   getConversation = asyncHandler(async (req: Request, res: Response) => {
-    const conversation = await messagingService.getConversationById(req.params.id, req.user!);
+    const conversation = await messagingService.getConversationById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -28,7 +28,7 @@ export class MessagingController {
 
   getMessages = asyncHandler(async (req: Request, res: Response) => {
     const filters = req.query as unknown as MessageFilterInput;
-    const result = await messagingService.getConversationMessages(req.params.id, filters, req.user!);
+    const result = await messagingService.getConversationMessages(String(req.params.id), filters, req.user!);
 
     res.status(200).json(result);
   });
@@ -45,7 +45,7 @@ export class MessagingController {
 
   updateConversation = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateConversationInput;
-    const conversation = await messagingService.updateConversation(req.params.id, data, req.user!);
+    const conversation = await messagingService.updateConversation(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,

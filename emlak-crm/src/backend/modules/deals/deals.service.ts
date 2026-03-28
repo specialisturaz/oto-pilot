@@ -12,18 +12,17 @@ import type {
 
 const prisma = new PrismaClient();
 
-// Defines the valid stage transitions
+// Defines the valid stage transitions (matching DealStage enum)
 const STAGE_ORDER = [
-  'lead',
-  'viewing_scheduled',
-  'viewing_done',
-  'negotiation',
-  'offer_made',
-  'offer_accepted',
-  'contract_prep',
-  'contract_signed',
-  'title_transfer',
-  'completed',
+  'INQUIRY',
+  'SHOWING',
+  'NEGOTIATION',
+  'OFFER',
+  'DEPOSIT',
+  'CONTRACT',
+  'TAPU_TRANSFER',
+  'COMPLETED',
+  'LOST',
 ] as const;
 
 export class DealsService {
@@ -34,84 +33,61 @@ export class DealsService {
     const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(filters);
 
     const where: Prisma.DealWhereInput = {
-      office_id: user.officeId,
-      is_deleted: false,
+      officeId: user.officeId!,
     };
 
     if (filters.search) {
       const term = filters.search.trim();
       where.OR = [
-        { title: { contains: term, mode: 'insensitive' } },
-        { buyer: { first_name: { contains: term, mode: 'insensitive' } } },
-        { buyer: { last_name: { contains: term, mode: 'insensitive' } } },
-        { seller: { first_name: { contains: term, mode: 'insensitive' } } },
-        { seller: { last_name: { contains: term, mode: 'insensitive' } } },
+        { notes: { contains: term, mode: 'insensitive' } },
+        { contact: { firstName: { contains: term, mode: 'insensitive' } } },
+        { contact: { lastName: { contains: term, mode: 'insensitive' } } },
         { property: { title: { contains: term, mode: 'insensitive' } } },
       ];
     }
 
     if (filters.deal_type) {
-      where.deal_type = filters.deal_type;
+      where.type = filters.deal_type as any;
     }
 
     if (filters.stage) {
       const stages = filters.stage.split(',').map((s) => s.trim());
       if (stages.length === 1) {
-        where.stage = stages[0];
+        where.stage = stages[0] as any;
       } else {
-        where.stage = { in: stages };
+        where.stage = { in: stages as any[] };
       }
     }
 
     if (filters.assigned_to) {
-      where.assigned_to_id = filters.assigned_to;
+      where.assignedUserId = filters.assigned_to;
     }
 
     if (filters.buyer_id) {
-      where.buyer_id = filters.buyer_id;
-    }
-
-    if (filters.seller_id) {
-      where.seller_id = filters.seller_id;
+      where.contactId = filters.buyer_id;
     }
 
     if (filters.property_id) {
-      where.property_id = filters.property_id;
+      where.propertyId = filters.property_id;
     }
 
-    if (filters.priority) {
-      where.priority = filters.priority;
-    }
-
-    // Price range (on final_price or expected_price)
+    // Price range
     if (filters.price_min || filters.price_max) {
-      where.OR = [
-        ...(where.OR || []),
-        {
-          final_price: {
-            ...(filters.price_min ? { gte: Number(filters.price_min) } : {}),
-            ...(filters.price_max ? { lte: Number(filters.price_max) } : {}),
-          },
-        },
-        {
-          expected_price: {
-            ...(filters.price_min ? { gte: Number(filters.price_min) } : {}),
-            ...(filters.price_max ? { lte: Number(filters.price_max) } : {}),
-          },
-        },
-      ];
+      where.agreedPrice = {};
+      if (filters.price_min) where.agreedPrice.gte = Number(filters.price_min);
+      if (filters.price_max) where.agreedPrice.lte = Number(filters.price_max);
     }
 
     if (filters.created_from || filters.created_to) {
-      where.created_at = {};
-      if (filters.created_from) where.created_at.gte = new Date(filters.created_from);
-      if (filters.created_to) where.created_at.lte = new Date(filters.created_to);
+      where.createdAt = {};
+      if (filters.created_from) where.createdAt.gte = new Date(filters.created_from);
+      if (filters.created_to) where.createdAt.lte = new Date(filters.created_to);
     }
 
     if (filters.expected_close_from || filters.expected_close_to) {
-      where.expected_close_date = {};
-      if (filters.expected_close_from) where.expected_close_date.gte = new Date(filters.expected_close_from);
-      if (filters.expected_close_to) where.expected_close_date.lte = new Date(filters.expected_close_to);
+      where.expectedCloseDate = {};
+      if (filters.expected_close_from) where.expectedCloseDate.gte = new Date(filters.expected_close_from);
+      if (filters.expected_close_to) where.expectedCloseDate.lte = new Date(filters.expected_close_to);
     }
 
     const [deals, total] = await Promise.all([
@@ -125,25 +101,20 @@ export class DealsService {
             select: {
               id: true,
               title: true,
-              listing_price: true,
-              city: true,
-              district: true,
-              property_type: true,
+              price: true,
+              propertyType: true,
               photos: {
                 take: 1,
-                orderBy: { sort_order: 'asc' },
-                select: { thumbnail_url: true },
+                orderBy: { orderIndex: 'asc' },
+                select: { thumbnailUrl: true },
               },
             },
           },
-          buyer: {
-            select: { id: true, first_name: true, last_name: true, phone: true },
+          contact: {
+            select: { id: true, firstName: true, lastName: true, phone: true },
           },
-          seller: {
-            select: { id: true, first_name: true, last_name: true, phone: true },
-          },
-          assigned_to: {
-            select: { id: true, first_name: true, last_name: true, avatar_url: true },
+          assignedUser: {
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true },
           },
         },
       }),
@@ -164,32 +135,24 @@ export class DealsService {
           select: {
             id: true,
             title: true,
-            listing_price: true,
-            city: true,
-            district: true,
-            neighborhood: true,
-            property_type: true,
-            listing_type: true,
-            gross_sqm: true,
-            room_count: true,
+            price: true,
+            address: true,
+            propertyType: true,
+            listingType: true,
+            grossSqm: true,
+            roomCount: true,
             photos: {
               take: 5,
-              orderBy: { sort_order: 'asc' },
-              select: { id: true, url: true, thumbnail_url: true },
+              orderBy: { orderIndex: 'asc' },
+              select: { id: true, url: true, thumbnailUrl: true },
             },
           },
         },
-        buyer: {
-          select: { id: true, first_name: true, last_name: true, phone: true, email: true },
+        contact: {
+          select: { id: true, firstName: true, lastName: true, phone: true, email: true },
         },
-        seller: {
-          select: { id: true, first_name: true, last_name: true, phone: true, email: true },
-        },
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true, email: true, phone: true },
-        },
-        created_by_user: {
-          select: { id: true, first_name: true, last_name: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, email: true, phone: true },
         },
       },
     });
@@ -198,7 +161,7 @@ export class DealsService {
       throw NotFoundError('Anlasmaya');
     }
 
-    if (deal.office_id !== user.officeId) {
+    if (deal.officeId !== user.officeId) {
       throw ForbiddenError('Bu anlasmaya erisim yetkiniz yok');
     }
 
@@ -211,52 +174,37 @@ export class DealsService {
   async createDeal(data: CreateDealInput, user: AuthenticatedUser) {
     const deal = await prisma.deal.create({
       data: {
-        title: data.title,
-        deal_type: data.deal_type,
-        stage: data.stage || 'lead',
-        property_id: data.property_id || null,
-        buyer_id: data.buyer_id || null,
-        seller_id: data.seller_id || null,
-        assigned_to_id: data.assigned_to_id || user.id,
-        expected_price: data.expected_price || null,
-        offer_price: data.offer_price || null,
-        final_price: data.final_price || null,
-        currency: data.currency || 'TRY',
-        commission_rate: data.commission_rate || null,
-        commission_amount: data.commission_amount || null,
-        commission_type: data.commission_type || 'percentage',
-        expected_close_date: data.expected_close_date ? new Date(data.expected_close_date) : null,
-        viewing_date: data.viewing_date ? new Date(data.viewing_date) : null,
-        notes: data.notes || null,
-        priority: data.priority || 'medium',
-        tags: data.tags || [],
-        office_id: user.officeId!,
-        created_by: user.id,
+        type: (data as any).deal_type || 'SALE',
+        stage: ((data as any).stage || 'INQUIRY').toUpperCase() as any,
+        propertyId: (data as any).property_id,
+        contactId: (data as any).buyer_id || (data as any).contact_id,
+        assignedUserId: (data as any).assigned_to_id || user.id,
+        askingPrice: (data as any).expected_price || null,
+        offerPrice: (data as any).offer_price || null,
+        agreedPrice: (data as any).final_price || null,
+        expectedCloseDate: (data as any).expected_close_date ? new Date((data as any).expected_close_date) : null,
+        notes: (data as any).notes || null,
+        officeId: user.officeId!,
       },
       include: {
         property: {
-          select: { id: true, title: true, listing_price: true },
+          select: { id: true, title: true, price: true },
         },
-        buyer: {
-          select: { id: true, first_name: true, last_name: true },
+        contact: {
+          select: { id: true, firstName: true, lastName: true },
         },
-        seller: {
-          select: { id: true, first_name: true, last_name: true },
-        },
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
 
     // Create initial stage history entry
-    await prisma.dealHistory.create({
+    await prisma.dealStageHistory.create({
       data: {
-        deal_id: deal.id,
-        action: 'stage_change',
-        from_value: null,
-        to_value: deal.stage,
-        user_id: user.id,
+        dealId: deal.id,
+        toStage: deal.stage,
+        changedById: user.id,
         notes: 'Anlasma olusturuldu',
       },
     });
@@ -264,16 +212,17 @@ export class DealsService {
     // Create activity
     await prisma.activity.create({
       data: {
-        type: 'deal_created',
-        description: `Yeni anlasma olusturuldu: ${deal.title}`,
-        deal_id: deal.id,
-        property_id: data.property_id || undefined,
-        contact_id: data.buyer_id || data.seller_id || undefined,
-        user_id: user.id,
+        type: 'DEAL_STAGE_CHANGE',
+        description: `Yeni anlasma olusturuldu`,
+        dealId: deal.id,
+        propertyId: (data as any).property_id || undefined,
+        contactId: (data as any).buyer_id || (data as any).contact_id || undefined,
+        userId: user.id,
+        officeId: user.officeId!,
       },
     });
 
-    logger.info(`Yeni anlasma olusturuldu: ${deal.title} (${deal.id})`);
+    logger.info(`Yeni anlasma olusturuldu: ${deal.id}`);
 
     return deal;
   }
@@ -288,30 +237,27 @@ export class DealsService {
       throw NotFoundError('Anlasma');
     }
 
-    if (existing.office_id !== user.officeId) {
+    if (existing.officeId !== user.officeId) {
       throw ForbiddenError('Bu anlasmaya erisim yetkiniz yok');
     }
 
     const deal = await prisma.deal.update({
       where: { id: dealId },
       data: {
-        ...data,
-        expected_close_date: data.expected_close_date ? new Date(data.expected_close_date) : undefined,
-        viewing_date: data.viewing_date ? new Date(data.viewing_date) : undefined,
-        updated_at: new Date(),
+        ...((data as any).expected_close_date !== undefined && {
+          expectedCloseDate: (data as any).expected_close_date ? new Date((data as any).expected_close_date) : null,
+        }),
+        ...((data as any).notes !== undefined && { notes: (data as any).notes }),
       },
       include: {
         property: {
-          select: { id: true, title: true, listing_price: true },
+          select: { id: true, title: true, price: true },
         },
-        buyer: {
-          select: { id: true, first_name: true, last_name: true },
+        contact: {
+          select: { id: true, firstName: true, lastName: true },
         },
-        seller: {
-          select: { id: true, first_name: true, last_name: true },
-        },
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
@@ -331,32 +277,30 @@ export class DealsService {
       throw NotFoundError('Anlasma');
     }
 
-    if (existing.office_id !== user.officeId) {
+    if (existing.officeId !== user.officeId) {
       throw ForbiddenError('Bu anlasmaya erisim yetkiniz yok');
     }
 
     const previousStage = existing.stage;
-    const newStage = data.stage;
+    const newStage = (data.stage as string).toUpperCase() as any;
 
     // Validate that a completed deal cannot be moved backwards (admin can override)
-    if (previousStage === 'completed' && user.role !== 'admin') {
+    if (previousStage === 'COMPLETED' && user.role !== 'ADMIN') {
       throw BadRequestError('Tamamlanmis bir anlasma geri alinAmaz');
     }
 
     const updateData: Prisma.DealUpdateInput = {
       stage: newStage,
-      updated_at: new Date(),
     };
 
-    // If deal is being completed, set completed_at
-    if (newStage === 'completed') {
-      updateData.completed_at = new Date();
+    // If deal is being completed, set actual close date
+    if (newStage === 'COMPLETED') {
+      updateData.actualCloseDate = new Date();
     }
 
     // If deal is lost, record the reason
-    if (newStage === 'lost') {
-      updateData.lost_reason = data.lost_reason || null;
-      updateData.lost_at = new Date();
+    if (newStage === 'LOST') {
+      updateData.lostReason = (data as any).lost_reason || null;
     }
 
     const deal = await prisma.deal.update({
@@ -366,23 +310,22 @@ export class DealsService {
         property: {
           select: { id: true, title: true },
         },
-        buyer: {
-          select: { id: true, first_name: true, last_name: true },
+        contact: {
+          select: { id: true, firstName: true, lastName: true },
         },
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true },
         },
       },
     });
 
     // Record stage change history
-    await prisma.dealHistory.create({
+    await prisma.dealStageHistory.create({
       data: {
-        deal_id: dealId,
-        action: 'stage_change',
-        from_value: previousStage,
-        to_value: newStage,
-        user_id: user.id,
+        dealId: dealId,
+        fromStage: previousStage,
+        toStage: newStage,
+        changedById: user.id,
         notes: data.notes || null,
       },
     });
@@ -390,23 +333,20 @@ export class DealsService {
     // Create activity
     await prisma.activity.create({
       data: {
-        type: 'deal_stage_changed',
+        type: 'DEAL_STAGE_CHANGE',
         description: `Anlasma asamasi degistirildi: ${previousStage} -> ${newStage}`,
-        deal_id: dealId,
-        user_id: user.id,
-        metadata: {
-          from_stage: previousStage,
-          to_stage: newStage,
-        },
+        dealId: dealId,
+        userId: user.id,
+        officeId: user.officeId!,
       },
     });
 
     // If the deal is completed and the property is linked, update property status
-    if (newStage === 'completed' && deal.property) {
-      const propertyStatus = existing.deal_type === 'sale' ? 'sold' : 'rented';
+    if (newStage === 'COMPLETED' && deal.propertyId) {
+      const propertyStatus = existing.type === 'SALE' ? 'SOLD' : 'RENTED';
       await prisma.property.update({
-        where: { id: deal.property.id },
-        data: { status: propertyStatus },
+        where: { id: deal.propertyId },
+        data: { propertyStatus: propertyStatus as any },
       });
     }
 
@@ -422,12 +362,12 @@ export class DealsService {
     // Verify access
     await this.getDealById(dealId, user);
 
-    const history = await prisma.dealHistory.findMany({
-      where: { deal_id: dealId },
-      orderBy: { created_at: 'desc' },
+    const history = await prisma.dealStageHistory.findMany({
+      where: { dealId: dealId },
+      orderBy: { createdAt: 'desc' },
       include: {
-        user: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+        changedBy: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
@@ -441,23 +381,12 @@ export class DealsService {
   async getDealCommissions(dealId: string, user: AuthenticatedUser) {
     const deal = await this.getDealById(dealId, user);
 
-    const basePrice = deal.final_price || deal.offer_price || deal.expected_price || 0;
+    const basePrice = Number(deal.agreedPrice || deal.offerPrice || deal.askingPrice || 0);
+    const commissionRate = Number(deal.commissionBuyerRate || deal.commissionSellerRate || 2);
 
-    let commissionAmount = 0;
+    const commissionAmount = (basePrice * commissionRate) / 100;
 
-    if (deal.commission_type === 'percentage' && deal.commission_rate) {
-      commissionAmount = (basePrice * deal.commission_rate) / 100;
-    } else if (deal.commission_type === 'fixed' && deal.commission_amount) {
-      commissionAmount = deal.commission_amount;
-    }
-
-    // Get office commission split rules if they exist
-    const officeSplit = await prisma.officeCommissionRule.findFirst({
-      where: { office_id: user.officeId! },
-      orderBy: { created_at: 'desc' },
-    });
-
-    const agentSharePercentage = officeSplit?.agent_share_percentage ?? 50;
+    const agentSharePercentage = 50;
     const officeSharePercentage = 100 - agentSharePercentage;
 
     const agentCommission = (commissionAmount * agentSharePercentage) / 100;
@@ -470,17 +399,15 @@ export class DealsService {
     return {
       deal_id: deal.id,
       base_price: basePrice,
-      currency: deal.currency,
       commission: {
-        type: deal.commission_type,
-        rate: deal.commission_rate,
+        rate: commissionRate,
         total_amount: commissionAmount,
       },
       split: {
         agent: {
-          user_id: deal.assigned_to_id,
-          name: deal.assigned_to
-            ? `${deal.assigned_to.first_name} ${deal.assigned_to.last_name}`
+          user_id: deal.assignedUserId,
+          name: deal.assignedUser
+            ? `${deal.assignedUser.firstName} ${deal.assignedUser.lastName}`
             : null,
           percentage: agentSharePercentage,
           amount: agentCommission,

@@ -3,7 +3,7 @@
 // Veritabanini ornek verilerle doldurur
 // ============================================================================
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import * as path from "path";
 import * as fs from "fs";
@@ -85,7 +85,7 @@ async function seedPortals(): Promise<void> {
         baseUrl: portal.baseUrl,
         apiUrl: portal.apiUrl,
         isActive: portal.isActive,
-        settings: portal.settings,
+        settings: portal.settings as Prisma.InputJsonValue,
       },
       create: {
         name: portal.name,
@@ -93,7 +93,7 @@ async function seedPortals(): Promise<void> {
         baseUrl: portal.baseUrl,
         apiUrl: portal.apiUrl,
         isActive: portal.isActive,
-        settings: portal.settings,
+        settings: portal.settings as Prisma.InputJsonValue,
       },
     });
   }

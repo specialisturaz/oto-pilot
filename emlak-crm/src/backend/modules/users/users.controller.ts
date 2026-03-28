@@ -27,7 +27,7 @@ export class UsersController {
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const user = await usersService.getUserById(req.params.id, req.user!);
+    const user = await usersService.getUserById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -47,7 +47,7 @@ export class UsersController {
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateUserInput;
-    const user = await usersService.updateUser(req.params.id, data, req.user!);
+    const user = await usersService.updateUser(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -76,7 +76,7 @@ export class UsersController {
   });
 
   deactivate = asyncHandler(async (req: Request, res: Response) => {
-    await usersService.deactivateUser(req.params.id, req.user!);
+    await usersService.deactivateUser(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,

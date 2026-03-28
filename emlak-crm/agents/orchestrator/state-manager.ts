@@ -15,7 +15,7 @@ import type {
   PROJECT_PHASES,
 } from '../contracts/type-definitions.js';
 
-const AGENTS_DIR = path.resolve(import.meta.dirname, '..');
+const AGENTS_DIR = path.resolve(__dirname, '..');
 const STATE_DIR = path.join(AGENTS_DIR, 'state');
 
 const ORCHESTRATOR_STATE_FILE = path.join(STATE_DIR, 'orchestrator-state.json');

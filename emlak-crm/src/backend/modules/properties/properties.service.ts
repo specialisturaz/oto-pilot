@@ -23,8 +23,7 @@ export class PropertiesService {
     const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(filters);
 
     const where: Prisma.PropertyWhereInput = {
-      office_id: user.officeId,
-      is_deleted: false,
+      officeId: user.officeId!,
     };
 
     // Full-text search
@@ -33,9 +32,7 @@ export class PropertiesService {
       where.OR = [
         { title: { contains: term, mode: 'insensitive' } },
         { description: { contains: term, mode: 'insensitive' } },
-        { city: { contains: term, mode: 'insensitive' } },
-        { district: { contains: term, mode: 'insensitive' } },
-        { neighborhood: { contains: term, mode: 'insensitive' } },
+        { address: { contains: term, mode: 'insensitive' } },
       ];
     }
 
@@ -43,91 +40,76 @@ export class PropertiesService {
     if (filters.property_type) {
       const types = filters.property_type.split(',').map((t) => t.trim());
       if (types.length === 1) {
-        where.property_type = types[0];
+        where.propertyType = types[0] as any;
       } else {
-        where.property_type = { in: types };
+        where.propertyType = { in: types as any[] };
       }
     }
 
     if (filters.listing_type) {
-      where.listing_type = filters.listing_type;
+      where.listingType = filters.listing_type as any;
     }
 
     if (filters.status) {
-      where.status = filters.status;
-    }
-
-    // Location filters
-    if (filters.city) {
-      where.city = filters.city;
-    }
-    if (filters.district) {
-      where.district = filters.district;
-    }
-    if (filters.neighborhood) {
-      where.neighborhood = { contains: filters.neighborhood, mode: 'insensitive' };
+      where.propertyStatus = filters.status as any;
     }
 
     // Price range
     if (filters.price_min || filters.price_max) {
-      where.listing_price = {};
+      where.price = {};
       if (filters.price_min) {
-        where.listing_price.gte = Number(filters.price_min);
+        where.price.gte = Number(filters.price_min);
       }
       if (filters.price_max) {
-        where.listing_price.lte = Number(filters.price_max);
+        where.price.lte = Number(filters.price_max);
       }
     }
 
     // Square meter range
     if (filters.sqm_min || filters.sqm_max) {
-      where.gross_sqm = {};
+      where.grossSqm = {};
       if (filters.sqm_min) {
-        where.gross_sqm.gte = Number(filters.sqm_min);
+        where.grossSqm.gte = Number(filters.sqm_min);
       }
       if (filters.sqm_max) {
-        where.gross_sqm.lte = Number(filters.sqm_max);
+        where.grossSqm.lte = Number(filters.sqm_max);
       }
     }
 
     // Room count
     if (filters.room_count) {
-      where.room_count = filters.room_count;
+      where.roomCount = filters.room_count;
     }
 
     // Floor range
     if (filters.floor_min || filters.floor_max) {
-      where.floor_number = {};
+      where.floorNumber = {};
       if (filters.floor_min) {
-        where.floor_number.gte = Number(filters.floor_min);
+        where.floorNumber.gte = Number(filters.floor_min);
       }
       if (filters.floor_max) {
-        where.floor_number.lte = Number(filters.floor_max);
+        where.floorNumber.lte = Number(filters.floor_max);
       }
     }
 
     // Building age
     if (filters.building_age_max) {
-      where.building_age = { lte: Number(filters.building_age_max) };
+      where.buildingAge = { lte: Number(filters.building_age_max) };
     }
 
     // Boolean filters
-    if (filters.is_furnished === 'true') where.is_furnished = true;
-    if (filters.has_elevator === 'true') where.has_elevator = true;
-    if (filters.has_parking === 'true') where.has_parking = true;
-    if (filters.has_balcony === 'true') where.has_balcony = true;
-    if (filters.has_garden === 'true') where.has_garden = true;
+    if (filters.is_furnished === 'true') where.isFurnished = true;
 
     if (filters.heating_type) {
-      where.heating_type = filters.heating_type;
+      where.heatingType = filters.heating_type as any;
     }
 
     if (filters.assigned_to) {
-      where.assigned_to_id = filters.assigned_to;
+      where.assignedUserId = filters.assigned_to;
     }
 
     if (filters.seller_contact_id) {
-      where.seller_contact_id = filters.seller_contact_id;
+      where.contactId = filters.seller_contact_id;
     }
 
     const [properties, total] = await Promise.all([
@@ -137,13 +119,13 @@ export class PropertiesService {
         take: limit,
         orderBy: { [sortBy]: sortOrder },
         include: {
-          assigned_to: {
-            select: { id: true, first_name: true, last_name: true, avatar_url: true },
+          assignedUser: {
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true },
           },
           photos: {
             take: 1,
-            orderBy: { sort_order: 'asc' },
-            select: { id: true, url: true, thumbnail_url: true },
+            orderBy: { orderIndex: 'asc' },
+            select: { id: true, url: true, thumbnailUrl: true },
           },
           _count: {
             select: { photos: true },
@@ -163,20 +145,17 @@ export class PropertiesService {
     const property = await prisma.property.findUnique({
       where: { id: propertyId },
       include: {
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true, email: true, phone: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, email: true, phone: true },
         },
-        seller_contact: {
-          select: { id: true, first_name: true, last_name: true, phone: true, email: true },
+        owner: {
+          select: { id: true, firstName: true, lastName: true, phone: true, email: true },
         },
         photos: {
-          orderBy: { sort_order: 'asc' },
+          orderBy: { orderIndex: 'asc' },
         },
         documents: {
-          orderBy: { created_at: 'desc' },
-        },
-        created_by_user: {
-          select: { id: true, first_name: true, last_name: true },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
@@ -185,7 +164,7 @@ export class PropertiesService {
       throw NotFoundError('Emlak ilani');
     }
 
-    if (property.office_id !== user.officeId) {
+    if (property.officeId !== user.officeId) {
       throw ForbiddenError('Bu ilana erisim yetkiniz yok');
     }
 
@@ -198,15 +177,13 @@ export class PropertiesService {
   async createProperty(data: CreatePropertyInput, user: AuthenticatedUser) {
     const property = await prisma.property.create({
       data: {
-        ...data,
-        features: data.features || [],
-        office_id: user.officeId!,
-        created_by: user.id,
-        assigned_to_id: data.assigned_to_id || user.id,
+        ...(data as any),
+        officeId: user.officeId!,
+        assignedUserId: (data as any).assigned_to_id || user.id,
       },
       include: {
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
@@ -214,11 +191,12 @@ export class PropertiesService {
     // Log activity
     await prisma.activity.create({
       data: {
-        type: 'property_created',
+        type: 'NOTE',
         description: `Yeni ilan olusturuldu: ${property.title}`,
-        property_id: property.id,
-        user_id: user.id,
-        contact_id: data.seller_contact_id || undefined,
+        propertyId: property.id,
+        userId: user.id,
+        officeId: user.officeId!,
+        contactId: (data as any).seller_contact_id || undefined,
       },
     });
 
@@ -239,24 +217,23 @@ export class PropertiesService {
       throw NotFoundError('Emlak ilani');
     }
 
-    if (existing.office_id !== user.officeId) {
+    if (existing.officeId !== user.officeId) {
       throw ForbiddenError('Bu ilana erisim yetkiniz yok');
     }
 
     const property = await prisma.property.update({
       where: { id: propertyId },
       data: {
-        ...data,
-        updated_at: new Date(),
+        ...(data as any),
       },
       include: {
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
         photos: {
           take: 1,
-          orderBy: { sort_order: 'asc' },
-          select: { id: true, url: true, thumbnail_url: true },
+          orderBy: { orderIndex: 'asc' },
+          select: { id: true, url: true, thumbnailUrl: true },
         },
       },
     });
@@ -278,16 +255,12 @@ export class PropertiesService {
       throw NotFoundError('Emlak ilani');
     }
 
-    if (existing.office_id !== user.officeId) {
+    if (existing.officeId !== user.officeId) {
       throw ForbiddenError('Bu ilana erisim yetkiniz yok');
     }
 
-    await prisma.property.update({
+    await prisma.property.delete({
       where: { id: propertyId },
-      data: {
-        is_deleted: true,
-        deleted_at: new Date(),
-      },
     });
 
     logger.info(`Emlak ilani silindi: ${propertyId}`);
@@ -310,28 +283,27 @@ export class PropertiesService {
       throw NotFoundError('Emlak ilani');
     }
 
-    if (existing.office_id !== user.officeId) {
+    if (existing.officeId !== user.officeId) {
       throw ForbiddenError('Bu ilana erisim yetkiniz yok');
     }
 
     // Get current max sort order
     const lastPhoto = await prisma.propertyPhoto.findFirst({
-      where: { property_id: propertyId },
-      orderBy: { sort_order: 'desc' },
+      where: { propertyId: propertyId },
+      orderBy: { orderIndex: 'desc' },
     });
-    let sortOrder = (lastPhoto?.sort_order ?? -1) + 1;
+    let sortOrder = (lastPhoto?.orderIndex ?? -1) + 1;
 
     const photos = await Promise.all(
       files.map((file) => {
         const photo = prisma.propertyPhoto.create({
           data: {
-            property_id: propertyId,
+            propertyId: propertyId,
             url: `/uploads/properties/${propertyId}/${file.filename}`,
-            thumbnail_url: `/uploads/properties/${propertyId}/thumb_${file.filename}`,
-            original_name: file.originalname,
-            mime_type: file.mimetype,
-            size_bytes: file.size,
-            sort_order: sortOrder++,
+            thumbnailUrl: `/uploads/properties/${propertyId}/thumb_${file.filename}`,
+            caption: file.originalname,
+            sizeBytes: file.size,
+            orderIndex: sortOrder++,
           },
         });
         return photo;
@@ -355,12 +327,12 @@ export class PropertiesService {
       throw NotFoundError('Emlak ilani');
     }
 
-    if (property.office_id !== user.officeId) {
+    if (property.officeId !== user.officeId) {
       throw ForbiddenError('Bu ilana erisim yetkiniz yok');
     }
 
     const photo = await prisma.propertyPhoto.findFirst({
-      where: { id: photoId, property_id: propertyId },
+      where: { id: photoId, propertyId: propertyId },
     });
 
     if (!photo) {
@@ -399,19 +371,18 @@ export class PropertiesService {
       throw NotFoundError('Emlak ilani');
     }
 
-    if (property.office_id !== user.officeId) {
+    if (property.officeId !== user.officeId) {
       throw ForbiddenError('Bu ilana erisim yetkiniz yok');
     }
 
     const document = await prisma.propertyDocument.create({
       data: {
-        property_id: propertyId,
-        url: `/uploads/properties/${propertyId}/docs/${file.filename}`,
-        original_name: file.originalname,
-        mime_type: file.mimetype,
-        size_bytes: file.size,
-        document_type: documentType,
-        uploaded_by: user.id,
+        propertyId: propertyId,
+        fileUrl: `/uploads/properties/${propertyId}/docs/${file.filename}`,
+        fileName: file.originalname,
+        fileSize: file.size,
+        type: documentType as any,
+        uploadedById: user.id,
       },
     });
 
@@ -426,47 +397,56 @@ export class PropertiesService {
   async publishToPortals(propertyId: string, data: PublishPropertyInput, user: AuthenticatedUser) {
     const property = await this.getPropertyById(propertyId, user);
 
-    if (property.status !== 'active') {
+    if (property.propertyStatus !== 'ACTIVE') {
       throw BadRequestError('Sadece aktif ilanlar portallara gonderilebilir');
     }
 
     const results: Array<{ portal: string; success: boolean; message: string; external_id?: string }> = [];
 
-    for (const portal of data.portals) {
+    for (const portalSlug of data.portals) {
       try {
-        // TODO: Implement actual portal API integrations
-        // For now, record the publishing attempt
-        const publishRecord = await prisma.portalPublishing.upsert({
+        // Find the portal by slug
+        const portal = await prisma.portal.findUnique({ where: { slug: portalSlug } });
+        if (!portal) {
+          results.push({
+            portal: portalSlug,
+            success: false,
+            message: `${portalSlug} portali bulunamadi`,
+          });
+          continue;
+        }
+
+        // Record the publishing attempt
+        const publishRecord = await prisma.portalListing.upsert({
           where: {
-            property_id_portal: {
-              property_id: propertyId,
-              portal,
+            propertyId_portalId: {
+              propertyId: propertyId,
+              portalId: portal.id,
             },
           },
           update: {
-            status: 'pending',
-            last_synced_at: new Date(),
+            status: 'PENDING',
+            lastSyncedAt: new Date(),
           },
           create: {
-            property_id: propertyId,
-            portal,
-            status: 'pending',
-            published_by: user.id,
+            propertyId: propertyId,
+            portalId: portal.id,
+            status: 'PENDING',
           },
         });
 
         results.push({
-          portal,
+          portal: portalSlug,
           success: true,
-          message: `${portal} portalina gonderildi`,
-          external_id: publishRecord.external_id || undefined,
+          message: `${portalSlug} portalina gonderildi`,
+          external_id: publishRecord.externalListingId || undefined,
         });
       } catch (error) {
-        logger.error(`Portal yayinlama hatasi (${portal}):`, error);
+        logger.error(`Portal yayinlama hatasi (${portalSlug}):`, error);
         results.push({
-          portal,
+          portal: portalSlug,
           success: false,
-          message: `${portal} portalina gonderme basarisiz`,
+          message: `${portalSlug} portalina gonderme basarisiz`,
         });
       }
     }
@@ -482,39 +462,30 @@ export class PropertiesService {
 
     const matchingContacts = await prisma.contact.findMany({
       where: {
-        office_id: user.officeId,
-        is_deleted: false,
-        contact_type: { in: ['buyer', 'both'] },
+        officeId: user.officeId!,
+        interestType: { in: ['BUYER', 'INVESTOR'] },
         OR: [
           // Budget matches
           {
-            budget_min: { lte: property.listing_price },
-            budget_max: { gte: property.listing_price },
-          },
-          // Location preference matches
-          {
-            preferred_locations: { hasSome: [property.city, property.district].filter(Boolean) as string[] },
-          },
-          // Property type preference matches
-          {
-            preferred_property_types: { has: property.property_type },
+            budgetMin: { lte: property.price },
+            budgetMax: { gte: property.price },
           },
         ],
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: 50,
       select: {
         id: true,
-        first_name: true,
-        last_name: true,
+        firstName: true,
+        lastName: true,
         phone: true,
         email: true,
-        budget_min: true,
-        budget_max: true,
-        preferred_locations: true,
-        preferred_property_types: true,
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true },
+        budgetMin: true,
+        budgetMax: true,
+        preferredLocations: true,
+        preferredPropertyTypes: true,
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true },
         },
       },
     });

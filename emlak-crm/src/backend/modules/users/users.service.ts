@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, type UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
@@ -221,20 +221,23 @@ export class UsersService {
       }
     }
 
+    const updateData: Prisma.UserUpdateInput = {};
+    if (data.email !== undefined) updateData.email = data.email;
+    if ((data as any).first_name !== undefined) updateData.firstName = (data as any).first_name;
+    if ((data as any).last_name !== undefined) updateData.lastName = (data as any).last_name;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.role !== undefined) updateData.role = data.role as UserRole;
+    if (data.title !== undefined) updateData.title = data.title;
+    if ((data as any).tc_kimlik_no !== undefined) updateData.tcKimlikNo = (data as any).tc_kimlik_no;
+    if ((data as any).avatar_url !== undefined) updateData.avatarUrl = (data as any).avatar_url;
+    if ((data as any).is_active !== undefined) updateData.isActive = (data as any).is_active;
+    if ((data as any).notification_preferences !== undefined) {
+      updateData.notificationPreferences = (data as any).notification_preferences as Prisma.InputJsonValue;
+    }
+
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(data.email !== undefined && { email: data.email }),
-        ...(data.first_name !== undefined && { firstName: data.first_name }),
-        ...(data.last_name !== undefined && { lastName: data.last_name }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.role !== undefined && { role: data.role as any }),
-        ...(data.title !== undefined && { title: data.title }),
-        ...(data.tc_kimlik_no !== undefined && { tcKimlikNo: data.tc_kimlik_no }),
-        ...(data.avatar_url !== undefined && { avatarUrl: data.avatar_url }),
-        ...(data.is_active !== undefined && { isActive: data.is_active }),
-        ...(data.notification_preferences !== undefined && { notificationPreferences: data.notification_preferences }),
-      },
+      data: updateData,
       select: USER_SELECT,
     });
 
@@ -247,16 +250,19 @@ export class UsersService {
    * Update the current user's profile.
    */
   async updateProfile(data: UpdateProfileInput, user: AuthenticatedUser) {
+    const profileData: Prisma.UserUpdateInput = {};
+    if ((data as any).first_name !== undefined) profileData.firstName = (data as any).first_name;
+    if ((data as any).last_name !== undefined) profileData.lastName = (data as any).last_name;
+    if (data.phone !== undefined) profileData.phone = data.phone;
+    if (data.title !== undefined) profileData.title = data.title;
+    if ((data as any).avatar_url !== undefined) profileData.avatarUrl = (data as any).avatar_url;
+    if ((data as any).notification_preferences !== undefined) {
+      profileData.notificationPreferences = (data as any).notification_preferences as Prisma.InputJsonValue;
+    }
+
     const updated = await prisma.user.update({
       where: { id: user.id },
-      data: {
-        ...(data.first_name !== undefined && { firstName: data.first_name }),
-        ...(data.last_name !== undefined && { lastName: data.last_name }),
-        ...(data.phone !== undefined && { phone: data.phone }),
-        ...(data.title !== undefined && { title: data.title }),
-        ...(data.avatar_url !== undefined && { avatarUrl: data.avatar_url }),
-        ...(data.notification_preferences !== undefined && { notificationPreferences: data.notification_preferences }),
-      },
+      data: profileData,
       select: USER_SELECT,
     });
 

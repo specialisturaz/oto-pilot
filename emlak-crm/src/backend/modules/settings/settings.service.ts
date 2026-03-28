@@ -87,7 +87,7 @@ export class SettingsService {
         ...(data.commission_rate_buy !== undefined && { commissionRateBuy: data.commission_rate_buy }),
         ...(data.commission_rate_sell !== undefined && { commissionRateSell: data.commission_rate_sell }),
         ...(data.commission_rate_rent !== undefined && { commissionRateRent: data.commission_rate_rent }),
-        ...(data.settings !== undefined && { settings: data.settings }),
+        ...(data.settings !== undefined && { settings: data.settings as Prisma.InputJsonValue }),
       },
     });
 
@@ -104,7 +104,7 @@ export class SettingsService {
       throw BadRequestError('Ofis bilgisi gerekli');
     }
 
-    const { page, limit, skip } = parsePaginationParams(filters);
+    const { page, limit, skip } = parsePaginationParams(filters as Record<string, unknown>);
 
     const where: Prisma.MessageTemplateWhereInput = {
       officeId: user.officeId,

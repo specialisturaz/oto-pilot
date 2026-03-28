@@ -323,37 +323,37 @@ enum TemplateCategory {
 // Office - Emlak Ofisi
 // ---------------------------------------------------------------------------
 model Office {
-  id                    String   @id @default(cuid())
-  name                  String
-  phone                 String?
-  email                 String?
-  address               String?
-  taxNumber             String?  @map("tax_number")
-  taxOffice             String?  @map("tax_office")
-  tradeRegistryNumber   String?  @map("trade_registry_number")
-  licenseNumber         String?  @map("license_number")
-  logoUrl               String?  @map("logo_url")
-  website               String?
-  commissionRateBuy     Decimal? @map("commission_rate_buy") @db.Decimal(5, 2)
-  commissionRateSell    Decimal? @map("commission_rate_sell") @db.Decimal(5, 2)
-  commissionRateRent    Decimal? @map("commission_rate_rent") @db.Decimal(5, 2)
-  settings              Json?    @default("{}")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(cuid())
+  name                String
+  phone               String?
+  email               String?
+  address             String?
+  taxNumber           String?  @map("tax_number")
+  taxOffice           String?  @map("tax_office")
+  tradeRegistryNumber String?  @map("trade_registry_number")
+  licenseNumber       String?  @map("license_number")
+  logoUrl             String?  @map("logo_url")
+  website             String?
+  commissionRateBuy   Decimal? @map("commission_rate_buy") @db.Decimal(5, 2)
+  commissionRateSell  Decimal? @map("commission_rate_sell") @db.Decimal(5, 2)
+  commissionRateRent  Decimal? @map("commission_rate_rent") @db.Decimal(5, 2)
+  settings            Json?    @default("{}")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   // Relations
-  users              User[]
-  contacts           Contact[]
-  properties         Property[]
-  deals              Deal[]
-  activities         Activity[]
-  tasks              Task[]
-  appointments       Appointment[]
-  commissions        Commission[]
-  conversations      Conversation[]
-  messages           Message[]
-  messageTemplates   MessageTemplate[]
-  buildings          Building[]
+  users            User[]
+  contacts         Contact[]
+  properties       Property[]
+  deals            Deal[]
+  activities       Activity[]
+  tasks            Task[]
+  appointments     Appointment[]
+  commissions      Commission[]
+  conversations    Conversation[]
+  messages         Message[]
+  messageTemplates MessageTemplate[]
+  buildings        Building[]
 
   @@map("offices")
 }
@@ -362,38 +362,38 @@ model Office {
 // User - Kullanici / Danisman
 // ---------------------------------------------------------------------------
 model User {
-  id                       String    @id @default(cuid())
-  officeId                 String    @map("office_id")
-  email                    String    @unique
-  phone                    String?
-  passwordHash             String    @map("password_hash")
-  firstName                String    @map("first_name")
-  lastName                 String    @map("last_name")
-  avatarUrl                String?   @map("avatar_url")
-  role                     UserRole  @default(AGENT)
-  tcKimlikNo               String?   @map("tc_kimlik_no")
-  title                    String?
-  isActive                 Boolean   @default(true) @map("is_active")
-  lastLoginAt              DateTime? @map("last_login_at")
-  notificationPreferences  Json?     @default("{}") @map("notification_preferences")
-  createdAt                DateTime  @default(now()) @map("created_at")
-  updatedAt                DateTime  @updatedAt @map("updated_at")
+  id                      String    @id @default(cuid())
+  officeId                String    @map("office_id")
+  email                   String    @unique
+  phone                   String?
+  passwordHash            String    @map("password_hash")
+  firstName               String    @map("first_name")
+  lastName                String    @map("last_name")
+  avatarUrl               String?   @map("avatar_url")
+  role                    UserRole  @default(AGENT)
+  tcKimlikNo              String?   @map("tc_kimlik_no")
+  title                   String?
+  isActive                Boolean   @default(true) @map("is_active")
+  lastLoginAt             DateTime? @map("last_login_at")
+  notificationPreferences Json?     @default("{}") @map("notification_preferences")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  office               Office         @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  assignedContacts     Contact[]      @relation("ContactAssignedUser")
-  assignedProperties   Property[]     @relation("PropertyAssignedUser")
-  assignedDeals        Deal[]         @relation("DealAssignedUser")
-  activities           Activity[]
-  createdTasks         Task[]         @relation("TaskCreatedBy")
-  assignedTasks        Task[]         @relation("TaskAssignedTo")
-  appointments         Appointment[]
-  commissions          Commission[]
-  assignedConversations Conversation[] @relation("ConversationAssignedUser")
-  notifications        Notification[]
-  dealStageChanges     DealStageHistory[] @relation("DealStageChangedBy")
-  uploadedDocuments    PropertyDocument[] @relation("DocumentUploadedBy")
-  auditLogs            AuditLog[]
+  office                Office             @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  assignedContacts      Contact[]          @relation("ContactAssignedUser")
+  assignedProperties    Property[]         @relation("PropertyAssignedUser")
+  assignedDeals         Deal[]             @relation("DealAssignedUser")
+  activities            Activity[]
+  createdTasks          Task[]             @relation("TaskCreatedBy")
+  assignedTasks         Task[]             @relation("TaskAssignedTo")
+  appointments          Appointment[]
+  commissions           Commission[]
+  assignedConversations Conversation[]     @relation("ConversationAssignedUser")
+  notifications         Notification[]
+  dealStageChanges      DealStageHistory[] @relation("DealStageChangedBy")
+  uploadedDocuments     PropertyDocument[] @relation("DocumentUploadedBy")
+  auditLogs             AuditLog[]
 
   @@index([officeId])
   @@index([email])
@@ -406,45 +406,46 @@ model User {
 // Contact - Musteri
 // ---------------------------------------------------------------------------
 model Contact {
-  id                    String         @id @default(cuid())
-  officeId              String         @map("office_id")
-  assignedUserId        String?        @map("assigned_user_id")
-  type                  ContactType    @default(INDIVIDUAL)
-  firstName             String         @map("first_name")
-  lastName              String         @map("last_name")
-  companyName           String?        @map("company_name")
-  email                 String?
-  phone                 String?
-  phoneSecondary        String?        @map("phone_secondary")
-  tcKimlikNo            String?        @map("tc_kimlik_no")
-  taxNumber             String?        @map("tax_number")
-  address               String?
-  city                  String?
-  district              String?
-  source                ContactSource  @default(OTHER)
-  sourceDetail          String?        @map("source_detail")
-  status                ContactStatus  @default(LEAD)
-  interestType          InterestType?  @map("interest_type")
-  budgetMin             Decimal?       @map("budget_min") @db.Decimal(15, 2)
-  budgetMax             Decimal?       @map("budget_max") @db.Decimal(15, 2)
-  preferredLocations    Json?          @map("preferred_locations")
+  id                     String        @id @default(cuid())
+  officeId               String        @map("office_id")
+  assignedUserId         String?       @map("assigned_user_id")
+  type                   ContactType   @default(INDIVIDUAL)
+  firstName              String        @map("first_name")
+  lastName               String        @map("last_name")
+  companyName            String?       @map("company_name")
+  email                  String?
+  phone                  String?
+  phoneSecondary         String?       @map("phone_secondary")
+  tcKimlikNo             String?       @map("tc_kimlik_no")
+  taxNumber              String?       @map("tax_number")
+  address                String?
+  city                   String?
+  district               String?
+  source                 ContactSource @default(OTHER)
+  sourceDetail           String?       @map("source_detail")
+  status                 ContactStatus @default(LEAD)
+  interestType           InterestType? @map("interest_type")
+  budgetMin              Decimal?      @map("budget_min") @db.Decimal(15, 2)
+  budgetMax              Decimal?      @map("budget_max") @db.Decimal(15, 2)
+  preferredLocations     Json?         @map("preferred_locations")
   preferredPropertyTypes Json?         @map("preferred_property_types")
-  notes                 String?
-  tags                  String[]       @default([])
-  lastContactAt         DateTime?      @map("last_contact_at")
-  nextFollowupAt        DateTime?      @map("next_followup_at")
-  createdAt             DateTime       @default(now()) @map("created_at")
-  updatedAt             DateTime       @updatedAt @map("updated_at")
+  notes                  String?
+  tags                   String[]      @default([])
+  lastContactAt          DateTime?     @map("last_contact_at")
+  nextFollowupAt         DateTime?     @map("next_followup_at")
+  createdAt              DateTime      @default(now()) @map("created_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  office               Office          @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  assignedUser         User?           @relation("ContactAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
-  ownedProperties      Property[]      @relation("PropertyOwner")
-  deals                Deal[]
-  activities           Activity[]
-  appointments         Appointment[]
-  conversations        Conversation[]
-  kvkkConsents         KvkkConsent[]
+  office          Office         @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  assignedUser    User?          @relation("ContactAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  ownedProperties Property[]     @relation("PropertyOwner")
+  deals           Deal[]
+  activities      Activity[]
+  appointments    Appointment[]
+  conversations   Conversation[]
+  kvkkConsents    KvkkConsent[]
+  tasks           Task[]
 
   @@index([officeId])
   @@index([assignedUserId])
@@ -462,76 +463,76 @@ model Contact {
 // Property - Gayrimenkul / Ilan
 // ---------------------------------------------------------------------------
 model Property {
-  id                  String          @id @default(cuid())
-  officeId            String          @map("office_id")
-  assignedUserId      String?         @map("assigned_user_id")
-  contactId           String?         @map("contact_id")
-  listingType         ListingType     @map("listing_type")
-  propertyType        PropertyType    @map("property_type")
-  propertyStatus      PropertyStatus  @default(DRAFT) @map("property_status")
+  id                  String           @id @default(cuid())
+  officeId            String           @map("office_id")
+  assignedUserId      String?          @map("assigned_user_id")
+  contactId           String?          @map("contact_id")
+  listingType         ListingType      @map("listing_type")
+  propertyType        PropertyType     @map("property_type")
+  propertyStatus      PropertyStatus   @default(DRAFT) @map("property_status")
   title               String
   description         String?
-  price               Decimal         @db.Decimal(15, 2)
-  currency            Currency        @default(TRY)
-  pricePerSqm         Decimal?        @map("price_per_sqm") @db.Decimal(15, 2)
-  isNegotiable        Boolean         @default(false) @map("is_negotiable")
-  ilId                String?         @map("il_id")
-  ilceId              String?         @map("ilce_id")
-  mahalleId           String?         @map("mahalle_id")
+  price               Decimal          @db.Decimal(15, 2)
+  currency            Currency         @default(TRY)
+  pricePerSqm         Decimal?         @map("price_per_sqm") @db.Decimal(15, 2)
+  isNegotiable        Boolean          @default(false) @map("is_negotiable")
+  ilId                String?          @map("il_id")
+  ilceId              String?          @map("ilce_id")
+  mahalleId           String?          @map("mahalle_id")
   address             String?
   latitude            Float?
   longitude           Float?
-  grossSqm            Int?            @map("gross_sqm")
-  netSqm              Int?            @map("net_sqm")
-  roomCount           String?         @map("room_count")
-  livingRoomCount     Int?            @map("living_room_count")
-  bathroomCount       Int?            @map("bathroom_count")
-  floorNumber         Int?            @map("floor_number")
-  totalFloors         Int?            @map("total_floors")
-  buildingAge         Int?            @map("building_age")
-  heatingType         HeatingType?    @map("heating_type")
-  deedType            DeedType?       @map("deed_type")
-  adaNo               String?         @map("ada_no")
-  parselNo            String?         @map("parsel_no")
-  isInSite            Boolean         @default(false) @map("is_in_site")
-  siteName            String?         @map("site_name")
-  duesAmount          Decimal?        @map("dues_amount") @db.Decimal(10, 2)
-  hasIskan            Boolean?        @map("has_iskan")
-  hasDask             Boolean?        @map("has_dask")
-  daskPolicyNo        String?         @map("dask_policy_no")
-  daskExpiryDate      DateTime?       @map("dask_expiry_date")
-  energyClass         EnergyClass?    @map("energy_class")
-  isEligibleForCredit Boolean?        @map("is_eligible_for_credit")
-  exchangeAllowed     Boolean         @default(false) @map("exchange_allowed")
-  isFurnished         Boolean?        @map("is_furnished")
-  usageStatus         UsageStatus?    @map("usage_status")
+  grossSqm            Int?             @map("gross_sqm")
+  netSqm              Int?             @map("net_sqm")
+  roomCount           String?          @map("room_count")
+  livingRoomCount     Int?             @map("living_room_count")
+  bathroomCount       Int?             @map("bathroom_count")
+  floorNumber         Int?             @map("floor_number")
+  totalFloors         Int?             @map("total_floors")
+  buildingAge         Int?             @map("building_age")
+  heatingType         HeatingType?     @map("heating_type")
+  deedType            DeedType?        @map("deed_type")
+  adaNo               String?          @map("ada_no")
+  parselNo            String?          @map("parsel_no")
+  isInSite            Boolean          @default(false) @map("is_in_site")
+  siteName            String?          @map("site_name")
+  duesAmount          Decimal?         @map("dues_amount") @db.Decimal(10, 2)
+  hasIskan            Boolean?         @map("has_iskan")
+  hasDask             Boolean?         @map("has_dask")
+  daskPolicyNo        String?          @map("dask_policy_no")
+  daskExpiryDate      DateTime?        @map("dask_expiry_date")
+  energyClass         EnergyClass?     @map("energy_class")
+  isEligibleForCredit Boolean?         @map("is_eligible_for_credit")
+  exchangeAllowed     Boolean          @default(false) @map("exchange_allowed")
+  isFurnished         Boolean?         @map("is_furnished")
+  usageStatus         UsageStatus?     @map("usage_status")
   facingDirection     FacingDirection? @map("facing_direction")
-  viewType            String[]        @default([]) @map("view_type")
-  internalNotes       String?         @map("internal_notes")
-  tags                String[]        @default([])
-  virtualTourUrl      String?         @map("virtual_tour_url")
-  videoUrl            String?         @map("video_url")
-  availableDate       DateTime?       @map("available_date")
-  buildingId          String?         @map("building_id")
-  createdAt           DateTime        @default(now()) @map("created_at")
-  updatedAt           DateTime        @updatedAt @map("updated_at")
+  viewType            String[]         @default([]) @map("view_type")
+  internalNotes       String?          @map("internal_notes")
+  tags                String[]         @default([])
+  virtualTourUrl      String?          @map("virtual_tour_url")
+  videoUrl            String?          @map("video_url")
+  availableDate       DateTime?        @map("available_date")
+  buildingId          String?          @map("building_id")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
 
   // Relations
-  office              Office              @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  assignedUser        User?               @relation("PropertyAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
-  owner               Contact?            @relation("PropertyOwner", fields: [contactId], references: [id], onDelete: SetNull)
-  il                  Il?                 @relation(fields: [ilId], references: [id])
-  ilce                Ilce?               @relation(fields: [ilceId], references: [id])
-  mahalle             Mahalle?            @relation(fields: [mahalleId], references: [id])
-  building            Building?           @relation(fields: [buildingId], references: [id], onDelete: SetNull)
-  photos              PropertyPhoto[]
-  documents           PropertyDocument[]
-  features            PropertyFeature[]
-  deals               Deal[]
-  activities          Activity[]
-  tasks               Task[]
-  appointments        Appointment[]
-  portalListings      PortalListing[]
+  office         Office             @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  assignedUser   User?              @relation("PropertyAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  owner          Contact?           @relation("PropertyOwner", fields: [contactId], references: [id], onDelete: SetNull)
+  il             Il?                @relation(fields: [ilId], references: [id])
+  ilce           Ilce?              @relation(fields: [ilceId], references: [id])
+  mahalle        Mahalle?           @relation(fields: [mahalleId], references: [id])
+  building       Building?          @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  photos         PropertyPhoto[]
+  documents      PropertyDocument[]
+  features       PropertyFeature[]
+  deals          Deal[]
+  activities     Activity[]
+  tasks          Task[]
+  appointments   Appointment[]
+  portalListings PortalListing[]
 
   @@index([officeId])
   @@index([assignedUserId])
@@ -640,40 +641,40 @@ model PropertyDocument {
 // Deal - Satis / Kiralama Sureci
 // ---------------------------------------------------------------------------
 model Deal {
-  id                  String           @id @default(cuid())
-  officeId            String           @map("office_id")
-  assignedUserId      String?          @map("assigned_user_id")
-  contactId           String           @map("contact_id")
-  propertyId          String           @map("property_id")
-  type                DealType
-  stage               DealStage        @default(INQUIRY)
-  askingPrice         Decimal?         @map("asking_price") @db.Decimal(15, 2)
-  offerPrice          Decimal?         @map("offer_price") @db.Decimal(15, 2)
-  agreedPrice         Decimal?         @map("agreed_price") @db.Decimal(15, 2)
-  depositAmount       Decimal?         @map("deposit_amount") @db.Decimal(15, 2)
-  depositPaidAt       DateTime?        @map("deposit_paid_at")
-  commissionBuyerRate  Decimal?        @map("commission_buyer_rate") @db.Decimal(5, 2)
-  commissionSellerRate Decimal?        @map("commission_seller_rate") @db.Decimal(5, 2)
-  commissionTotal     Decimal?         @map("commission_total") @db.Decimal(15, 2)
-  commissionStatus    CommissionStatus @default(PENDING) @map("commission_status")
-  expectedCloseDate   DateTime?        @map("expected_close_date")
-  actualCloseDate     DateTime?        @map("actual_close_date")
-  tapuAppointmentDate DateTime?        @map("tapu_appointment_date")
-  notes               String?
-  lostReason          String?          @map("lost_reason")
-  createdAt           DateTime         @default(now()) @map("created_at")
-  updatedAt           DateTime         @updatedAt @map("updated_at")
+  id                   String           @id @default(cuid())
+  officeId             String           @map("office_id")
+  assignedUserId       String?          @map("assigned_user_id")
+  contactId            String           @map("contact_id")
+  propertyId           String           @map("property_id")
+  type                 DealType
+  stage                DealStage        @default(INQUIRY)
+  askingPrice          Decimal?         @map("asking_price") @db.Decimal(15, 2)
+  offerPrice           Decimal?         @map("offer_price") @db.Decimal(15, 2)
+  agreedPrice          Decimal?         @map("agreed_price") @db.Decimal(15, 2)
+  depositAmount        Decimal?         @map("deposit_amount") @db.Decimal(15, 2)
+  depositPaidAt        DateTime?        @map("deposit_paid_at")
+  commissionBuyerRate  Decimal?         @map("commission_buyer_rate") @db.Decimal(5, 2)
+  commissionSellerRate Decimal?         @map("commission_seller_rate") @db.Decimal(5, 2)
+  commissionTotal      Decimal?         @map("commission_total") @db.Decimal(15, 2)
+  commissionStatus     CommissionStatus @default(PENDING) @map("commission_status")
+  expectedCloseDate    DateTime?        @map("expected_close_date")
+  actualCloseDate      DateTime?        @map("actual_close_date")
+  tapuAppointmentDate  DateTime?        @map("tapu_appointment_date")
+  notes                String?
+  lostReason           String?          @map("lost_reason")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
 
   // Relations
-  office           Office             @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  assignedUser     User?              @relation("DealAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
-  contact          Contact            @relation(fields: [contactId], references: [id], onDelete: Restrict)
-  property         Property           @relation(fields: [propertyId], references: [id], onDelete: Restrict)
-  stageHistory     DealStageHistory[]
-  activities       Activity[]
-  tasks            Task[]
-  appointments     Appointment[]
-  commissions      Commission[]
+  office       Office             @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  assignedUser User?              @relation("DealAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  contact      Contact            @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  property     Property           @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  stageHistory DealStageHistory[]
+  activities   Activity[]
+  tasks        Task[]
+  appointments Appointment[]
+  commissions  Commission[]
 
   @@index([officeId])
   @@index([assignedUserId])
@@ -691,13 +692,13 @@ model Deal {
 // DealStageHistory - Asama Gecmisi
 // ---------------------------------------------------------------------------
 model DealStageHistory {
-  id          String    @id @default(cuid())
-  dealId      String    @map("deal_id")
+  id          String     @id @default(cuid())
+  dealId      String     @map("deal_id")
   fromStage   DealStage? @map("from_stage")
-  toStage     DealStage @map("to_stage")
-  changedById String    @map("changed_by_id")
+  toStage     DealStage  @map("to_stage")
+  changedById String     @map("changed_by_id")
   notes       String?
-  createdAt   DateTime  @default(now()) @map("created_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
 
   // Relations
   deal      Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -789,22 +790,22 @@ model Task {
 // Appointment - Randevu
 // ---------------------------------------------------------------------------
 model Appointment {
-  id            String            @id @default(cuid())
-  officeId      String            @map("office_id")
-  userId        String            @map("user_id")
-  contactId     String            @map("contact_id")
-  propertyId    String?           @map("property_id")
-  dealId        String?           @map("deal_id")
-  type          AppointmentType   @default(SHOWING)
-  title         String
-  notes         String?
-  startTime     DateTime          @map("start_time")
-  endTime       DateTime          @map("end_time")
-  location      String?
-  status        AppointmentStatus @default(SCHEDULED)
-  reminderSent  Boolean           @default(false) @map("reminder_sent")
-  createdAt     DateTime          @default(now()) @map("created_at")
-  updatedAt     DateTime          @updatedAt @map("updated_at")
+  id           String            @id @default(cuid())
+  officeId     String            @map("office_id")
+  userId       String            @map("user_id")
+  contactId    String            @map("contact_id")
+  propertyId   String?           @map("property_id")
+  dealId       String?           @map("deal_id")
+  type         AppointmentType   @default(SHOWING)
+  title        String
+  notes        String?
+  startTime    DateTime          @map("start_time")
+  endTime      DateTime          @map("end_time")
+  location     String?
+  status       AppointmentStatus @default(SCHEDULED)
+  reminderSent Boolean           @default(false) @map("reminder_sent")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
 
   // Relations
   office   Office    @relation(fields: [officeId], references: [id], onDelete: Cascade)
@@ -861,17 +862,17 @@ model Commission {
 // Portal - Emlak Portali
 // ---------------------------------------------------------------------------
 model Portal {
-  id                String  @id @default(cuid())
-  name              String
-  slug              String  @unique
-  baseUrl           String? @map("base_url")
-  apiUrl            String? @map("api_url")
-  apiKeyEncrypted   String? @map("api_key_encrypted")
-  apiSecretEncrypted String? @map("api_secret_encrypted")
-  isActive          Boolean @default(true) @map("is_active")
-  settings          Json?   @default("{}")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(cuid())
+  name               String
+  slug               String   @unique
+  baseUrl            String?  @map("base_url")
+  apiUrl             String?  @map("api_url")
+  apiKeyEncrypted    String?  @map("api_key_encrypted")
+  apiSecretEncrypted String?  @map("api_secret_encrypted")
+  isActive           Boolean  @default(true) @map("is_active")
+  settings           Json?    @default("{}")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   // Relations
   listings PortalListing[]
@@ -916,16 +917,16 @@ model PortalListing {
 // Conversation - Mesajlasma
 // ---------------------------------------------------------------------------
 model Conversation {
-  id              String             @id @default(cuid())
-  officeId        String             @map("office_id")
-  contactId       String             @map("contact_id")
-  assignedUserId  String?            @map("assigned_user_id")
-  channel         MessageChannel
-  status          ConversationStatus @default(OPEN)
-  lastMessageAt   DateTime?          @map("last_message_at")
-  unreadCount     Int                @default(0) @map("unread_count")
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
+  id             String             @id @default(cuid())
+  officeId       String             @map("office_id")
+  contactId      String             @map("contact_id")
+  assignedUserId String?            @map("assigned_user_id")
+  channel        MessageChannel
+  status         ConversationStatus @default(OPEN)
+  lastMessageAt  DateTime?          @map("last_message_at")
+  unreadCount    Int                @default(0) @map("unread_count")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
   // Relations
   office       Office    @relation(fields: [officeId], references: [id], onDelete: Cascade)
@@ -945,19 +946,19 @@ model Conversation {
 // Message - Mesaj
 // ---------------------------------------------------------------------------
 model Message {
-  id                String        @id @default(cuid())
-  officeId          String        @map("office_id")
-  conversationId    String        @map("conversation_id")
-  senderType        SenderType    @map("sender_type")
-  senderId          String?       @map("sender_id")
+  id                String         @id @default(cuid())
+  officeId          String         @map("office_id")
+  conversationId    String         @map("conversation_id")
+  senderType        SenderType     @map("sender_type")
+  senderId          String?        @map("sender_id")
   channel           MessageChannel
   content           String?
-  mediaUrl          String?       @map("media_url")
-  mediaType         String?       @map("media_type")
-  status            MessageStatus @default(SENT)
-  externalMessageId String?       @map("external_message_id")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  mediaUrl          String?        @map("media_url")
+  mediaType         String?        @map("media_type")
+  status            MessageStatus  @default(SENT)
+  externalMessageId String?        @map("external_message_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
 
   // Relations
   office       Office       @relation(fields: [officeId], references: [id], onDelete: Cascade)
@@ -975,19 +976,19 @@ model Message {
 // MessageTemplate - Mesaj Sablonu
 // ---------------------------------------------------------------------------
 model MessageTemplate {
-  id                   String           @id @default(cuid())
-  officeId             String           @map("office_id")
-  name                 String
-  channel              MessageChannel
-  category             TemplateCategory @default(GENERAL)
-  subject              String?
-  content              String
-  variables            String[]         @default([])
-  isWhatsappApproved   Boolean          @default(false) @map("is_whatsapp_approved")
-  whatsappTemplateId   String?          @map("whatsapp_template_id")
-  language             String           @default("tr")
-  createdAt            DateTime         @default(now()) @map("created_at")
-  updatedAt            DateTime         @updatedAt @map("updated_at")
+  id                 String           @id @default(cuid())
+  officeId           String           @map("office_id")
+  name               String
+  channel            MessageChannel
+  category           TemplateCategory @default(GENERAL)
+  subject            String?
+  content            String
+  variables          String[]         @default([])
+  isWhatsappApproved Boolean          @default(false) @map("is_whatsapp_approved")
+  whatsappTemplateId String?          @map("whatsapp_template_id")
+  language           String           @default("tr")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
 
   // Relations
   office Office @relation(fields: [officeId], references: [id], onDelete: Cascade)

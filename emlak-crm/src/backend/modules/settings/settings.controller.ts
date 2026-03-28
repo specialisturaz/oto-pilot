@@ -35,7 +35,7 @@ export class SettingsController {
   });
 
   getTemplate = asyncHandler(async (req: Request, res: Response) => {
-    const template = await settingsService.getTemplateById(req.params.id, req.user!);
+    const template = await settingsService.getTemplateById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -53,7 +53,7 @@ export class SettingsController {
   });
 
   updateTemplate = asyncHandler(async (req: Request, res: Response) => {
-    const template = await settingsService.updateTemplate(req.params.id, req.body, req.user!);
+    const template = await settingsService.updateTemplate(String(req.params.id), req.body, req.user!);
 
     res.status(200).json({
       success: true,
@@ -62,7 +62,7 @@ export class SettingsController {
   });
 
   deleteTemplate = asyncHandler(async (req: Request, res: Response) => {
-    await settingsService.deleteTemplate(req.params.id, req.user!);
+    await settingsService.deleteTemplate(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,

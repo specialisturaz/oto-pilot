@@ -17,7 +17,7 @@ export class PropertiesController {
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const property = await propertiesService.getPropertyById(req.params.id, req.user!);
+    const property = await propertiesService.getPropertyById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -37,7 +37,7 @@ export class PropertiesController {
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdatePropertyInput;
-    const property = await propertiesService.updateProperty(req.params.id, data, req.user!);
+    const property = await propertiesService.updateProperty(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -46,7 +46,7 @@ export class PropertiesController {
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
-    await propertiesService.deleteProperty(req.params.id, req.user!);
+    await propertiesService.deleteProperty(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -65,7 +65,7 @@ export class PropertiesController {
       return;
     }
 
-    const photos = await propertiesService.addPhotos(req.params.id, files, req.user!);
+    const photos = await propertiesService.addPhotos(String(req.params.id), files, req.user!);
 
     res.status(201).json({
       success: true,
@@ -74,7 +74,7 @@ export class PropertiesController {
   });
 
   deletePhoto = asyncHandler(async (req: Request, res: Response) => {
-    await propertiesService.deletePhoto(req.params.id, req.params.photoId, req.user!);
+    await propertiesService.deletePhoto(String(req.params.id), String(req.params.photoId), req.user!);
 
     res.status(200).json({
       success: true,
@@ -94,7 +94,7 @@ export class PropertiesController {
     }
 
     const documentType = req.body.document_type || 'other';
-    const document = await propertiesService.addDocument(req.params.id, file, documentType, req.user!);
+    const document = await propertiesService.addDocument(String(req.params.id), file, documentType, req.user!);
 
     res.status(201).json({
       success: true,
@@ -104,7 +104,7 @@ export class PropertiesController {
 
   publish = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as PublishPropertyInput;
-    const results = await propertiesService.publishToPortals(req.params.id, data, req.user!);
+    const results = await propertiesService.publishToPortals(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -113,7 +113,7 @@ export class PropertiesController {
   });
 
   findMatchingBuyers = asyncHandler(async (req: Request, res: Response) => {
-    const contacts = await propertiesService.findMatchingBuyers(req.params.id, req.user!);
+    const contacts = await propertiesService.findMatchingBuyers(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,

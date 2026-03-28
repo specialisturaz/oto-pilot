@@ -24,7 +24,7 @@ export class TasksController {
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const task = await tasksService.getTaskById(req.params.id, req.user!);
+    const task = await tasksService.getTaskById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -44,7 +44,7 @@ export class TasksController {
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateTaskInput;
-    const task = await tasksService.updateTask(req.params.id, data, req.user!);
+    const task = await tasksService.updateTask(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -54,7 +54,7 @@ export class TasksController {
 
   assign = asyncHandler(async (req: Request, res: Response) => {
     const { assigned_to_id } = req.body;
-    const task = await tasksService.assignTask(req.params.id, assigned_to_id, req.user!);
+    const task = await tasksService.assignTask(String(req.params.id), assigned_to_id, req.user!);
 
     res.status(200).json({
       success: true,
@@ -64,7 +64,7 @@ export class TasksController {
 
   complete = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as CompleteTaskInput;
-    const task = await tasksService.completeTask(req.params.id, data, req.user!);
+    const task = await tasksService.completeTask(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -73,7 +73,7 @@ export class TasksController {
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
-    await tasksService.deleteTask(req.params.id, req.user!);
+    await tasksService.deleteTask(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,

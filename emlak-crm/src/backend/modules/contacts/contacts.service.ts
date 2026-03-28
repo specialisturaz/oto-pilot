@@ -20,27 +20,27 @@ export class ContactsService {
     const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(filters);
 
     const where: Prisma.ContactWhereInput = {
-      office_id: user.officeId,
+      officeId: user.officeId!,
     };
 
     // Full-text search across name, email, phone
     if (filters.search) {
       const searchTerm = filters.search.trim();
       where.OR = [
-        { first_name: { contains: searchTerm, mode: 'insensitive' } },
-        { last_name: { contains: searchTerm, mode: 'insensitive' } },
+        { firstName: { contains: searchTerm, mode: 'insensitive' } },
+        { lastName: { contains: searchTerm, mode: 'insensitive' } },
         { email: { contains: searchTerm, mode: 'insensitive' } },
         { phone: { contains: searchTerm } },
-        { company_name: { contains: searchTerm, mode: 'insensitive' } },
+        { companyName: { contains: searchTerm, mode: 'insensitive' } },
       ];
     }
 
     if (filters.contact_type) {
-      where.contact_type = filters.contact_type;
+      where.type = filters.contact_type as any;
     }
 
     if (filters.source) {
-      where.source = filters.source;
+      where.source = filters.source as any;
     }
 
     if (filters.city) {
@@ -52,7 +52,7 @@ export class ContactsService {
     }
 
     if (filters.assigned_to) {
-      where.assigned_to_id = filters.assigned_to;
+      where.assignedUserId = filters.assigned_to;
     }
 
     if (filters.tags) {
@@ -61,12 +61,12 @@ export class ContactsService {
     }
 
     if (filters.created_from || filters.created_to) {
-      where.created_at = {};
+      where.createdAt = {};
       if (filters.created_from) {
-        where.created_at.gte = new Date(filters.created_from);
+        where.createdAt.gte = new Date(filters.created_from);
       }
       if (filters.created_to) {
-        where.created_at.lte = new Date(filters.created_to);
+        where.createdAt.lte = new Date(filters.created_to);
       }
     }
 
@@ -77,8 +77,8 @@ export class ContactsService {
         take: limit,
         orderBy: { [sortBy]: sortOrder },
         include: {
-          assigned_to: {
-            select: { id: true, first_name: true, last_name: true, avatar_url: true },
+          assignedUser: {
+            select: { id: true, firstName: true, lastName: true, avatarUrl: true },
           },
         },
       }),
@@ -95,11 +95,8 @@ export class ContactsService {
     const contact = await prisma.contact.findUnique({
       where: { id: contactId },
       include: {
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true, email: true },
-        },
-        created_by_user: {
-          select: { id: true, first_name: true, last_name: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true, email: true },
         },
       },
     });
@@ -109,7 +106,7 @@ export class ContactsService {
     }
 
     // Office-level access check
-    if (contact.office_id !== user.officeId) {
+    if (contact.officeId !== user.officeId) {
       throw ForbiddenError('Bu musteriye erisim yetkiniz yok');
     }
 
@@ -122,22 +119,19 @@ export class ContactsService {
   async createContact(data: CreateContactInput, user: AuthenticatedUser) {
     const contact = await prisma.contact.create({
       data: {
-        ...data,
-        tags: data.tags || [],
-        preferred_locations: data.preferred_locations || [],
-        preferred_property_types: data.preferred_property_types || [],
-        office_id: user.officeId!,
-        created_by: user.id,
-        assigned_to_id: user.id,
+        ...(data as any),
+        tags: (data as any).tags || [],
+        officeId: user.officeId!,
+        assignedUserId: user.id,
       },
       include: {
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
 
-    logger.info(`Yeni musteri olusturuldu: ${contact.first_name} ${contact.last_name} (${contact.id})`);
+    logger.info(`Yeni musteri olusturuldu: ${contact.firstName} ${contact.lastName} (${contact.id})`);
 
     return contact;
   }
@@ -155,19 +149,18 @@ export class ContactsService {
       throw NotFoundError('Musteri');
     }
 
-    if (existing.office_id !== user.officeId) {
+    if (existing.officeId !== user.officeId) {
       throw ForbiddenError('Bu musteriye erisim yetkiniz yok');
     }
 
     const contact = await prisma.contact.update({
       where: { id: contactId },
       data: {
-        ...data,
-        updated_at: new Date(),
+        ...(data as any),
       },
       include: {
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
@@ -189,16 +182,12 @@ export class ContactsService {
       throw NotFoundError('Musteri');
     }
 
-    if (existing.office_id !== user.officeId) {
+    if (existing.officeId !== user.officeId) {
       throw ForbiddenError('Bu musteriye erisim yetkiniz yok');
     }
 
-    await prisma.contact.update({
+    await prisma.contact.delete({
       where: { id: contactId },
-      data: {
-        is_deleted: true,
-        deleted_at: new Date(),
-      },
     });
 
     logger.info(`Musteri silindi: ${contactId}`);
@@ -212,12 +201,12 @@ export class ContactsService {
     await this.getContactById(contactId, user);
 
     const activities = await prisma.activity.findMany({
-      where: { contact_id: contactId },
-      orderBy: { created_at: 'desc' },
+      where: { contactId: contactId },
+      orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
         user: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
@@ -234,18 +223,15 @@ export class ContactsService {
 
     const deals = await prisma.deal.findMany({
       where: {
-        OR: [
-          { buyer_id: contactId },
-          { seller_id: contactId },
-        ],
+        contactId: contactId,
       },
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
       include: {
         property: {
-          select: { id: true, title: true, listing_price: true },
+          select: { id: true, title: true, price: true },
         },
-        assigned_to: {
-          select: { id: true, first_name: true, last_name: true },
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true },
         },
       },
     });
@@ -258,36 +244,35 @@ export class ContactsService {
    */
   async addContactNote(contactId: string, data: CreateNoteInput, user: AuthenticatedUser) {
     // Verify access
-    await this.getContactById(contactId, user);
+    const contact = await this.getContactById(contactId, user);
 
-    const note = await prisma.note.create({
+    // Create an activity log entry for the note
+    const activity = await prisma.activity.create({
       data: {
-        content: data.content,
-        is_private: data.is_private,
-        contact_id: contactId,
-        user_id: user.id,
+        type: 'NOTE',
+        description: (data as any).content || 'Not eklendi',
+        contactId: contactId,
+        userId: user.id,
+        officeId: user.officeId!,
       },
       include: {
         user: {
-          select: { id: true, first_name: true, last_name: true, avatar_url: true },
+          select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
       },
     });
 
-    // Also create an activity log entry
-    await prisma.activity.create({
+    // Update contact's notes field
+    await prisma.contact.update({
+      where: { id: contactId },
       data: {
-        type: 'note_added',
-        description: `Not eklendi`,
-        contact_id: contactId,
-        user_id: user.id,
-        metadata: { note_id: note.id },
+        notes: (data as any).content || '',
       },
     });
 
     logger.info(`Musteriye not eklendi: ${contactId}`);
 
-    return note;
+    return activity;
   }
 }
 

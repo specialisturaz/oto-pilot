@@ -11,6 +11,7 @@ import {
   MessageSquare,
   Globe,
   BarChart3,
+  FileText,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/mesajlar", label: "Mesajlar", icon: MessageSquare },
   { href: "/portallar", label: "Portallar", icon: Globe },
   { href: "/raporlar", label: "Raporlar", icon: BarChart3 },
+  { href: "/belgeler", label: "Belgeler", icon: FileText },
   { href: "/ayarlar", label: "Ayarlar", icon: Settings },
 ];
 

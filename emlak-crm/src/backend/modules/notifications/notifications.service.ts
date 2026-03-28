@@ -28,7 +28,7 @@ export class NotificationsService {
    * Get notifications for the current user.
    */
   async getMyNotifications(filters: NotificationFilterInput, user: AuthenticatedUser) {
-    const { page, limit, skip } = parsePaginationParams(filters);
+    const { page, limit, skip } = parsePaginationParams(filters as Record<string, unknown>);
 
     const where: Prisma.NotificationWhereInput = {
       userId: user.id,

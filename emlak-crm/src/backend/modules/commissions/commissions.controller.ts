@@ -19,7 +19,7 @@ export class CommissionsController {
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const commission = await commissionsService.getCommissionById(req.params.id, req.user!);
+    const commission = await commissionsService.getCommissionById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -49,7 +49,7 @@ export class CommissionsController {
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateCommissionInput;
-    const commission = await commissionsService.updateCommission(req.params.id, data, req.user!);
+    const commission = await commissionsService.updateCommission(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -59,7 +59,7 @@ export class CommissionsController {
 
   approve = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as ApproveCommissionInput;
-    const commission = await commissionsService.approveCommission(req.params.id, data, req.user!);
+    const commission = await commissionsService.approveCommission(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -69,7 +69,7 @@ export class CommissionsController {
 
   markPaid = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as MarkPaidInput;
-    const commission = await commissionsService.markCommissionPaid(req.params.id, data, req.user!);
+    const commission = await commissionsService.markCommissionPaid(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -78,7 +78,7 @@ export class CommissionsController {
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
-    await commissionsService.deleteCommission(req.params.id, req.user!);
+    await commissionsService.deleteCommission(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,

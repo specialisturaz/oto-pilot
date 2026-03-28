@@ -27,7 +27,7 @@ import type {
 const TICK_INTERVAL_MS = 5_000; // Main loop interval
 const HEARTBEAT_INTERVAL_MS = 30_000;
 const MAX_CONCURRENT_TASKS = 5;
-const LOGS_DIR = path.resolve(import.meta.dirname, '..', 'logs');
+const LOGS_DIR = path.resolve(__dirname, '..', 'logs');
 
 // ---------------------------------------------------------------------------
 // Logger
@@ -379,7 +379,7 @@ export class Orchestrator {
     this.stateManager.writeOrchestratorState(orcState);
 
     // Also write to agent-specific inbox file
-    const inboxDir = path.resolve(import.meta.dirname, '..', 'state', 'inboxes');
+    const inboxDir = path.resolve(__dirname, '..', 'state', 'inboxes');
     ensureDir(inboxDir);
     const inboxFile = path.join(inboxDir, `${to}.jsonl`);
     fs.appendFileSync(inboxFile, JSON.stringify(fullMessage) + '\n', 'utf-8');
@@ -506,7 +506,7 @@ export class Orchestrator {
    * Ensure all required state files exist.
    */
   private ensureInitialState(): void {
-    const stateDir = path.resolve(import.meta.dirname, '..', 'state');
+    const stateDir = path.resolve(__dirname, '..', 'state');
     ensureDir(stateDir);
     ensureDir(LOGS_DIR);
 

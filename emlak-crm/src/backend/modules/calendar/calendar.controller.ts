@@ -36,7 +36,7 @@ export class CalendarController {
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const appointment = await calendarService.getAppointmentById(req.params.id, req.user!);
+    const appointment = await calendarService.getAppointmentById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -56,7 +56,7 @@ export class CalendarController {
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateAppointmentInput;
-    const appointment = await calendarService.updateAppointment(req.params.id, data, req.user!);
+    const appointment = await calendarService.updateAppointment(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -65,7 +65,7 @@ export class CalendarController {
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
-    await calendarService.deleteAppointment(req.params.id, req.user!);
+    await calendarService.deleteAppointment(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,

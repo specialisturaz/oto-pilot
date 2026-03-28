@@ -226,11 +226,11 @@ export class CommissionsService {
 
     if (data.amount !== undefined) {
       updateData.amount = data.amount;
-      const shareRate = data.agent_share_rate ?? Number(existing.agentShareRate ?? DEFAULT_AGENT_SHARE);
+      const shareRate = (data.agent_share_rate != null ? data.agent_share_rate : null) ?? Number(existing.agentShareRate ?? DEFAULT_AGENT_SHARE);
       updateData.agentShareRate = shareRate;
       updateData.agentShareAmount = (data.amount * shareRate) / 100;
       updateData.officeShareAmount = data.amount - ((data.amount * shareRate) / 100);
-    } else if (data.agent_share_rate !== undefined) {
+    } else if (data.agent_share_rate !== undefined && data.agent_share_rate !== null) {
       const amount = Number(existing.amount);
       updateData.agentShareRate = data.agent_share_rate;
       updateData.agentShareAmount = (amount * data.agent_share_rate) / 100;

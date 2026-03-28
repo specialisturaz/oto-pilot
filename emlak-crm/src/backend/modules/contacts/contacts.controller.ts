@@ -17,7 +17,7 @@ export class ContactsController {
   });
 
   getById = asyncHandler(async (req: Request, res: Response) => {
-    const contact = await contactsService.getContactById(req.params.id, req.user!);
+    const contact = await contactsService.getContactById(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -37,7 +37,7 @@ export class ContactsController {
 
   update = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as UpdateContactInput;
-    const contact = await contactsService.updateContact(req.params.id, data, req.user!);
+    const contact = await contactsService.updateContact(String(req.params.id), data, req.user!);
 
     res.status(200).json({
       success: true,
@@ -46,7 +46,7 @@ export class ContactsController {
   });
 
   delete = asyncHandler(async (req: Request, res: Response) => {
-    await contactsService.deleteContact(req.params.id, req.user!);
+    await contactsService.deleteContact(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -55,7 +55,7 @@ export class ContactsController {
   });
 
   getActivities = asyncHandler(async (req: Request, res: Response) => {
-    const activities = await contactsService.getContactActivities(req.params.id, req.user!);
+    const activities = await contactsService.getContactActivities(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -64,7 +64,7 @@ export class ContactsController {
   });
 
   getDeals = asyncHandler(async (req: Request, res: Response) => {
-    const deals = await contactsService.getContactDeals(req.params.id, req.user!);
+    const deals = await contactsService.getContactDeals(String(req.params.id), req.user!);
 
     res.status(200).json({
       success: true,
@@ -74,7 +74,7 @@ export class ContactsController {
 
   addNote = asyncHandler(async (req: Request, res: Response) => {
     const data = req.body as CreateNoteInput;
-    const note = await contactsService.addContactNote(req.params.id, data, req.user!);
+    const note = await contactsService.addContactNote(String(req.params.id), data, req.user!);
 
     res.status(201).json({
       success: true,

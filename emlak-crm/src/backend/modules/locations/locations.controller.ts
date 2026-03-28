@@ -13,7 +13,7 @@ export class LocationsController {
   });
 
   getIlById = asyncHandler(async (req: Request, res: Response) => {
-    const il = await locationsService.getIlById(req.params.id);
+    const il = await locationsService.getIlById(String(req.params.id));
 
     res.status(200).json({
       success: true,
@@ -22,7 +22,7 @@ export class LocationsController {
   });
 
   getIlceler = asyncHandler(async (req: Request, res: Response) => {
-    const ilceler = await locationsService.getIlcelerByIl(req.params.id);
+    const ilceler = await locationsService.getIlcelerByIl(String(req.params.id));
 
     res.status(200).json({
       success: true,
@@ -31,7 +31,7 @@ export class LocationsController {
   });
 
   getMahalleler = asyncHandler(async (req: Request, res: Response) => {
-    const mahalleler = await locationsService.getMahallelerByIlce(req.params.id);
+    const mahalleler = await locationsService.getMahallelerByIlce(String(req.params.id));
 
     res.status(200).json({
       success: true,

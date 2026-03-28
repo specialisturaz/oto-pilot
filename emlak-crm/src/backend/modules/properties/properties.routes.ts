@@ -36,7 +36,7 @@ const photoUpload = multer({
     files: 20, // Max 20 photos at once
   },
   fileFilter: (_req, file, cb) => {
-    if (config.upload.allowedImageTypes.includes(file.mimetype)) {
+    if ((config.upload.allowedImageTypes as readonly string[]).includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Gecersiz dosya tipi. Sadece JPEG, PNG ve WebP kabul edilir.'));
@@ -64,7 +64,7 @@ const documentUpload = multer({
   },
   fileFilter: (_req, file, cb) => {
     const allAllowed = [...config.upload.allowedImageTypes, ...config.upload.allowedDocumentTypes];
-    if (allAllowed.includes(file.mimetype)) {
+    if ((allAllowed as string[]).includes(file.mimetype)) {
       cb(null, true);
     } else {
       cb(new Error('Gecersiz dosya tipi.'));

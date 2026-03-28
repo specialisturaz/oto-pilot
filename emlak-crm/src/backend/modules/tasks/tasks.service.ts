@@ -195,23 +195,30 @@ export class TasksService {
   async updateTask(taskId: string, data: UpdateTaskInput, user: AuthenticatedUser) {
     const existing = await this.getTaskById(taskId, user);
 
+    const taskUpdateData: Prisma.TaskUpdateInput = {};
+    if (data.title !== undefined) taskUpdateData.title = data.title;
+    if (data.description !== undefined) taskUpdateData.description = data.description;
+    if (data.type !== undefined) taskUpdateData.type = data.type as any;
+    if (data.priority !== undefined) taskUpdateData.priority = data.priority as any;
+    if (data.status !== undefined) taskUpdateData.status = data.status as any;
+    if (data.assigned_to_id !== undefined && data.assigned_to_id !== null) taskUpdateData.assignedTo = { connect: { id: data.assigned_to_id } };
+    if (data.contact_id !== undefined) {
+      taskUpdateData.contact = data.contact_id ? { connect: { id: data.contact_id } } : { disconnect: true };
+    }
+    if (data.property_id !== undefined) {
+      taskUpdateData.property = data.property_id ? { connect: { id: data.property_id } } : { disconnect: true };
+    }
+    if (data.deal_id !== undefined) {
+      taskUpdateData.deal = data.deal_id ? { connect: { id: data.deal_id } } : { disconnect: true };
+    }
+    if (data.due_date !== undefined) taskUpdateData.dueDate = data.due_date ? new Date(data.due_date) : null;
+    if (data.reminder_at !== undefined) taskUpdateData.reminderAt = data.reminder_at ? new Date(data.reminder_at) : null;
+    if (data.is_recurring !== undefined) taskUpdateData.isRecurring = data.is_recurring;
+    if (data.recurrence_rule !== undefined) taskUpdateData.recurrenceRule = data.recurrence_rule;
+
     const task = await prisma.task.update({
       where: { id: taskId },
-      data: {
-        ...(data.title !== undefined && { title: data.title }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.type !== undefined && { type: data.type }),
-        ...(data.priority !== undefined && { priority: data.priority }),
-        ...(data.status !== undefined && { status: data.status }),
-        ...(data.assigned_to_id !== undefined && { assignedToId: data.assigned_to_id }),
-        ...(data.contact_id !== undefined && { contactId: data.contact_id }),
-        ...(data.property_id !== undefined && { propertyId: data.property_id }),
-        ...(data.deal_id !== undefined && { dealId: data.deal_id }),
-        ...(data.due_date !== undefined && { dueDate: data.due_date ? new Date(data.due_date) : null }),
-        ...(data.reminder_at !== undefined && { reminderAt: data.reminder_at ? new Date(data.reminder_at) : null }),
-        ...(data.is_recurring !== undefined && { isRecurring: data.is_recurring }),
-        ...(data.recurrence_rule !== undefined && { recurrenceRule: data.recurrence_rule }),
-      },
+      data: taskUpdateData,
       include: {
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
