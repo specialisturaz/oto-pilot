@@ -201,7 +201,7 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full"
                 size="lg"
-                disabled={isLoading || isQuickLoading}
+                disabled={isLoading || !!isQuickLoading}
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
