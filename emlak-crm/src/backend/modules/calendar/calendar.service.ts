@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { notifyUser } from '../../utils/notification-helper';
 import logger from '../../utils/logger';
 import type { AuthenticatedUser } from '../../middleware/auth';
 import type {
@@ -200,6 +201,26 @@ export class CalendarService {
 
     logger.info(`Yeni randevu olusturuldu: ${appointment.title} (${appointment.id})`);
 
+    // --- Notification: New Appointment ---
+    const contactName = appointment.contact
+      ? `${appointment.contact.firstName} ${appointment.contact.lastName}`
+      : '';
+    const dateStr = startTime.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Istanbul',
+    });
+    await notifyUser(user.id, user.officeId!, {
+      type: 'NEW_APPOINTMENT',
+      title: 'Yeni randevu',
+      body: `${dateStr} - ${appointment.title}${contactName ? ` (${contactName})` : ''}`,
+      link: '/takvim',
+      contactId: data.contact_id || undefined,
+    });
+
     return appointment;
   }
 
@@ -323,6 +344,31 @@ export class CalendarService {
       where: { id: appointmentId },
       data: { reminderSent: true },
     });
+  }
+
+  /**
+   * Process appointment reminders: find appointments starting within 1 hour
+   * that haven't been reminded yet, and notify the assigned users.
+   * Should be called by a background/cron job.
+   */
+  async processAppointmentReminders(officeId: string) {
+    const appointments = await this.getAppointmentsNeedingReminder(officeId);
+
+    for (const appointment of appointments) {
+      if (appointment.user) {
+        await notifyUser(appointment.user.id, officeId, {
+          type: 'APPOINTMENT_REMINDER',
+          title: 'Randevu hatirlatmasi',
+          body: `1 saat sonra: ${appointment.title}`,
+          link: '/takvim',
+        });
+
+        await this.markReminderSent(appointment.id);
+      }
+    }
+
+    logger.info(`Randevu hatirlatmalari islendi: ${appointments.length} randevu (ofis: ${officeId})`);
+    return { processed: appointments.length };
   }
 }
 

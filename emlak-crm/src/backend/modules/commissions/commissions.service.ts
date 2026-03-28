@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { notifyUser } from '../../utils/notification-helper';
 import logger from '../../utils/logger';
 import type { AuthenticatedUser } from '../../middleware/auth';
 import type {
@@ -269,6 +270,18 @@ export class CommissionsService {
 
     logger.info(`Komisyon onaylandi: ${commissionId}`);
 
+    // --- Notification: Commission Approved ---
+    if (commission.agentId && commission.agentId !== user.id) {
+      const amount = Number(commission.amount);
+      const formattedAmount = new Intl.NumberFormat('tr-TR').format(amount);
+      await notifyUser(commission.agentId, user.officeId!, {
+        type: 'COMMISSION_APPROVED',
+        title: 'Komisyon onaylandi',
+        body: `${formattedAmount} TL komisyon onaylandi`,
+        link: '/komisyonlar',
+      });
+    }
+
     return commission;
   }
 
@@ -304,6 +317,18 @@ export class CommissionsService {
     });
 
     logger.info(`Komisyon odendi: ${commissionId}`);
+
+    // --- Notification: Commission Paid ---
+    if (commission.agentId && commission.agentId !== user.id) {
+      const amount = Number(commission.amount);
+      const formattedAmount = new Intl.NumberFormat('tr-TR').format(amount);
+      await notifyUser(commission.agentId, user.officeId!, {
+        type: 'COMMISSION_PAID',
+        title: 'Komisyon odendi',
+        body: `${formattedAmount} TL komisyon odemeniz yapildi`,
+        link: '/komisyonlar',
+      });
+    }
 
     return commission;
   }

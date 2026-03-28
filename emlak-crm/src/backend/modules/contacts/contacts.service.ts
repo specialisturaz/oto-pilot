@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { NotFoundError, ForbiddenError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { notifyUser } from '../../utils/notification-helper';
 import logger from '../../utils/logger';
 import type { AuthenticatedUser } from '../../middleware/auth';
 import type {
@@ -132,6 +133,20 @@ export class ContactsService {
     });
 
     logger.info(`Yeni musteri olusturuldu: ${contact.firstName} ${contact.lastName} (${contact.id})`);
+
+    // --- Notification: New Lead/Contact Created ---
+    const assignedUserId = contact.assignedUserId || user.id;
+    if (assignedUserId) {
+      const contactName = `${contact.firstName} ${contact.lastName}`.trim();
+      const source = (data as any).source || 'Bilinmeyen';
+      await notifyUser(assignedUserId, user.officeId!, {
+        type: 'NEW_CONTACT',
+        title: 'Yeni musteri atandi',
+        body: `${contactName} (${source}) size atandi`,
+        link: `/musteriler/${contact.id}`,
+        contactId: contact.id,
+      });
+    }
 
     return contact;
   }

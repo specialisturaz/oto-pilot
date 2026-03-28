@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { notifyUser } from '../../utils/notification-helper';
 import { SyndicationEngine } from '../../../integrations/portals/syndication-engine';
 import type { PortalProperty } from '../../../integrations/portals/base-portal';
 import config from '../../config';
@@ -558,6 +559,19 @@ export class PropertiesService {
     logger.info(
       `Portal yayinlama tamamlandi: ilan ${propertyId}, ${syndicationResult.successCount} basarili, ${syndicationResult.failureCount} basarisiz`
     );
+
+    // --- Notification: Property Published to Portal ---
+    const assignedAgentId = property.assignedUserId || user.id;
+    for (const result of results) {
+      if (result.success) {
+        await notifyUser(assignedAgentId, user.officeId!, {
+          type: 'PROPERTY_PUBLISHED',
+          title: 'Ilan yayinlandi',
+          body: `'${property.title}' ${result.portal} portalinde yayinlandi`,
+          link: `/ilanlar/${propertyId}`,
+        });
+      }
+    }
 
     // 5. Return results
     return results;

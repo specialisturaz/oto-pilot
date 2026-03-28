@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { notifyUser, notifyOfficeUsers } from '../../utils/notification-helper';
 import logger from '../../utils/logger';
 import type { AuthenticatedUser } from '../../middleware/auth';
 import type {
@@ -347,6 +348,29 @@ export class DealsService {
       await prisma.property.update({
         where: { id: deal.propertyId },
         data: { propertyStatus: propertyStatus as any },
+      });
+    }
+
+    // --- Notification: Deal Stage Changed ---
+    const propertyTitle = deal.property?.title || 'Emlak';
+    if (deal.assignedUserId && deal.assignedUserId !== user.id) {
+      await notifyUser(deal.assignedUserId, user.officeId!, {
+        type: 'DEAL_STAGE_CHANGED',
+        title: 'Satis asamasi degisti',
+        body: `'${propertyTitle}' - ${previousStage} → ${newStage}`,
+        link: '/satislar',
+      });
+    }
+
+    // --- Notification: Deal Completed (notify ALL office users) ---
+    if (newStage === 'COMPLETED') {
+      const agreedPrice = deal.agreedPrice ? Number(deal.agreedPrice) : 0;
+      const formattedPrice = new Intl.NumberFormat('tr-TR').format(agreedPrice);
+      await notifyOfficeUsers(user.officeId!, {
+        type: 'DEAL_COMPLETED',
+        title: 'Satis tamamlandi!',
+        body: `${propertyTitle} - ${formattedPrice} TL`,
+        link: '/satislar',
       });
     }
 

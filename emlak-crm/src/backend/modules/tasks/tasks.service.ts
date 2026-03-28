@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { notifyUser } from '../../utils/notification-helper';
 import logger from '../../utils/logger';
 import type { AuthenticatedUser } from '../../middleware/auth';
 import type {
@@ -186,6 +187,21 @@ export class TasksService {
 
     logger.info(`Yeni gorev olusturuldu: ${task.title} (${task.id})`);
 
+    // --- Notification: Task Assigned ---
+    const assignedToId = data.assigned_to_id || user.id;
+    if (assignedToId !== user.id) {
+      const assignerName = task.createdBy
+        ? `${task.createdBy.firstName} ${task.createdBy.lastName}`
+        : 'Bir kullanici';
+      await notifyUser(assignedToId, user.officeId!, {
+        type: 'TASK_ASSIGNED',
+        title: 'Yeni gorev atandi',
+        body: `${assignerName} size bir gorev atadi: ${task.title}`,
+        link: '/gorevler',
+        contactId: data.contact_id || undefined,
+      });
+    }
+
     return task;
   }
 
@@ -261,6 +277,26 @@ export class TasksService {
 
     logger.info(`Gorev atandi: ${taskId} -> ${assignToId}`);
 
+    // --- Notification: Task Reassigned ---
+    if (assignToId !== user.id) {
+      const assigner = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { firstName: true, lastName: true },
+      });
+      const taskData = await prisma.task.findUnique({
+        where: { id: taskId },
+        select: { title: true },
+      });
+      const displayName = assigner ? `${assigner.firstName} ${assigner.lastName}` : 'Bir kullanici';
+
+      await notifyUser(assignToId, user.officeId!, {
+        type: 'TASK_ASSIGNED',
+        title: 'Yeni gorev atandi',
+        body: `${displayName} size bir gorev atadi: ${taskData?.title || 'Gorev'}`,
+        link: '/gorevler',
+      });
+    }
+
     return task;
   }
 
@@ -288,8 +324,27 @@ export class TasksService {
         assignedTo: {
           select: { id: true, firstName: true, lastName: true, avatarUrl: true },
         },
+        createdBy: {
+          select: { id: true, firstName: true, lastName: true },
+        },
       },
     });
+
+    // Save completion note as an activity record if provided
+    if (data.notes) {
+      await prisma.activity.create({
+        data: {
+          officeId: existing.officeId,
+          userId: user.id,
+          type: 'TASK_COMPLETED',
+          subject: `task:${taskId}`,
+          description: data.notes,
+          contactId: existing.contactId,
+          propertyId: existing.propertyId,
+          dealId: existing.dealId,
+        },
+      });
+    }
 
     // If the task is recurring, create the next instance
     if (existing.isRecurring && existing.recurrenceRule) {
@@ -358,6 +413,28 @@ export class TasksService {
         },
       },
     });
+  }
+
+  /**
+   * Process due-soon task reminders: find tasks due within 24h and notify assigned users.
+   * Should be called by a background/cron job.
+   */
+  async processTaskDueSoonReminders(officeId: string) {
+    const tasks = await this.getTasksDueSoon(officeId);
+
+    for (const task of tasks) {
+      if (task.assignedTo) {
+        await notifyUser(task.assignedTo.id, officeId, {
+          type: 'TASK_DUE_SOON',
+          title: 'Gorev hatirlatmasi',
+          body: `'${task.title}' gorevi yarin sona eriyor`,
+          link: '/gorevler',
+        });
+      }
+    }
+
+    logger.info(`Gorev hatirlatmalari islendi: ${tasks.length} gorev (ofis: ${officeId})`);
+    return { processed: tasks.length };
   }
 
   /**

@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { notifyUser } from '../../utils/notification-helper';
 import logger from '../../utils/logger';
 import type { AuthenticatedUser } from '../../middleware/auth';
 import type {
@@ -468,6 +469,22 @@ export class MessagingService {
       where: { id: contact.id },
       data: { lastContactAt: new Date() },
     });
+
+    // --- Notification: New Message Received ---
+    const assignedUserId = conversation.assignedUserId || contact.assignedUserId;
+    if (assignedUserId) {
+      const contactDisplayName = `${contact.firstName} ${contact.lastName}`.trim();
+      const messagePreview = messageContent.length > 50
+        ? messageContent.substring(0, 50) + '...'
+        : messageContent;
+      await notifyUser(assignedUserId, contact.officeId, {
+        type: 'NEW_MESSAGE',
+        title: 'Yeni mesaj',
+        body: `${contactDisplayName}: ${messagePreview || '(medya)'}`,
+        link: '/mesajlar',
+        contactId: contact.id,
+      });
+    }
 
     logger.info(`WhatsApp mesaji alindi: ${contact.firstName} ${contact.lastName} -> ${conversation.id}`);
   }
