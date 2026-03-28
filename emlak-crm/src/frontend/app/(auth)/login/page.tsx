@@ -176,7 +176,19 @@ export default function LoginPage() {
 
               {/* Forgot Password */}
               <div className="text-center">
-                <Button variant="link" className="text-sm" type="button">
+                <Button
+                  variant="link"
+                  className="text-sm"
+                  type="button"
+                  onClick={() => {
+                    const email = prompt("Sifre sifirlama e-postasi gonderilecek adresinizi girin:");
+                    if (email) {
+                      api.post("/api/v1/auth/forgot-password", { email })
+                        .then(() => alert("Sifre sifirlama baglantisi e-posta adresinize gonderildi."))
+                        .catch(() => alert("E-posta gonderilemedi. Lutfen tekrar deneyin."));
+                    }
+                  }}
+                >
                   Sifremi Unuttum
                 </Button>
               </div>

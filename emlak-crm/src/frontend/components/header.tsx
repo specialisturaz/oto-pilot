@@ -39,7 +39,7 @@ export function Header() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
-  const unreadCount = notifData?.count ?? notifData?.unreadCount ?? (typeof notifData === "number" ? notifData : 0);
+  const unreadCount = notifData?.unread_count ?? notifData?.count ?? notifData?.unreadCount ?? (typeof notifData === "number" ? notifData : 0);
 
   const handleLogout = () => {
     logout();
