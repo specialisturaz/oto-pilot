@@ -31,7 +31,7 @@ export function parsePaginationParams(query: Record<string, unknown>): Paginatio
   if (limit < 1) limit = DEFAULT_LIMIT;
   if (limit > MAX_LIMIT) limit = MAX_LIMIT;
 
-  const sortBy = typeof query.sortBy === 'string' ? query.sortBy : 'created_at';
+  const sortBy = typeof query.sortBy === 'string' ? query.sortBy : 'createdAt';
   const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
 
   const skip = (page - 1) * limit;

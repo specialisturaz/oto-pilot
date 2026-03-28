@@ -3,6 +3,8 @@ import path from 'path';
 import fs from 'fs/promises';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
+import { SyndicationEngine } from '../../../integrations/portals/syndication-engine';
+import type { PortalProperty } from '../../../integrations/portals/base-portal';
 import config from '../../config';
 import logger from '../../utils/logger';
 import type { AuthenticatedUser } from '../../middleware/auth';
@@ -393,64 +395,171 @@ export class PropertiesService {
 
   /**
    * Publish property to external portals (sahibinden, hepsiemlak, emlakjet).
+   * Full end-to-end: load property -> map to PortalProperty -> call syndication engine -> save results.
    */
   async publishToPortals(propertyId: string, data: PublishPropertyInput, user: AuthenticatedUser) {
-    const property = await this.getPropertyById(propertyId, user);
+    // 1. Get property from DB with all details
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+      include: {
+        assignedUser: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        il: true,
+        ilce: true,
+        mahalle: true,
+        photos: { orderBy: { orderIndex: 'asc' } },
+        features: {
+          include: { feature: true },
+        },
+      },
+    });
 
-    if (property.propertyStatus !== 'ACTIVE') {
+    if (!property) {
+      throw NotFoundError('Emlak ilani');
+    }
+
+    if (property.officeId !== user.officeId) {
+      throw ForbiddenError('Bu ilana erisim yetkiniz yok');
+    }
+
+    if (property.propertyStatus !== 'ACTIVE' && property.propertyStatus !== 'active') {
       throw BadRequestError('Sadece aktif ilanlar portallara gonderilebilir');
     }
 
+    // 2. Map property to PortalProperty format
+    const portalProperty: PortalProperty = {
+      id: property.id,
+      title: property.title,
+      description: property.description || '',
+      price: property.price,
+      currency: (property.currency as 'TRY' | 'USD' | 'EUR' | 'GBP') || 'TRY',
+      listingType: property.listingType.toUpperCase().includes('SATILIK') ? 'SALE' : 'RENT',
+      propertyType: property.propertyType.toUpperCase(),
+      il: property.il?.name || '',
+      ilce: property.ilce?.name || '',
+      mahalle: property.mahalle?.name || '',
+      address: property.address || '',
+      latitude: property.latitude || undefined,
+      longitude: property.longitude || undefined,
+      grossSqm: property.grossSqm || 0,
+      netSqm: property.netSqm || 0,
+      roomCount: property.roomCount || '1+0',
+      bathroomCount: property.bathroomCount || 1,
+      floorNumber: property.floorNumber || 0,
+      totalFloors: property.totalFloors || 1,
+      buildingAge: property.buildingAge || 0,
+      heatingType: property.heatingType || 'NONE',
+      deedType: property.deedType || '',
+      hasIskan: property.hasIskan ?? false,
+      hasDask: property.hasDask ?? false,
+      isFurnished: property.isFurnished ?? false,
+      duesAmount: property.duesAmount || undefined,
+      features: property.features.map((pf) => pf.feature.nameTr),
+      photos: property.photos.map((p) => ({
+        url: p.url.startsWith('http') ? p.url : `${config.server.frontendUrl}${p.url}`,
+        order: p.orderIndex,
+        iscover: p.orderIndex === 0,
+      })),
+    };
+
+    // 3. Build syndication engine from active portals in DB
+    const activePortals = await prisma.portal.findMany({ where: { isActive: true } });
+    const portalConfigs = activePortals.map((p) => ({
+      name: p.name,
+      slug: p.slug,
+      apiKey: p.apiKeyEncrypted || '',
+      apiSecret: p.apiSecretEncrypted || '',
+      isActive: p.isActive,
+    }));
+    const engine = new SyndicationEngine(portalConfigs);
+
+    // Call syndication engine
+    const syndicationResult = await engine.publishToAll(portalProperty, data.portals);
+
+    // 4. Create PortalListing records in DB for each successful publish
     const results: Array<{ portal: string; success: boolean; message: string; external_id?: string }> = [];
 
-    for (const portalSlug of data.portals) {
-      try {
-        // Find the portal by slug
-        const portal = await prisma.portal.findUnique({ where: { slug: portalSlug } });
-        if (!portal) {
-          results.push({
-            portal: portalSlug,
-            success: false,
-            message: `${portalSlug} portali bulunamadi`,
-          });
-          continue;
-        }
+    for (const item of syndicationResult.results) {
+      const portal = await prisma.portal.findUnique({ where: { slug: item.portal } });
+      if (!portal) continue;
 
-        // Record the publishing attempt
-        const publishRecord = await prisma.portalListing.upsert({
-          where: {
-            propertyId_portalId: {
+      try {
+        if (item.result.success) {
+          const publishRecord = await prisma.portalListing.upsert({
+            where: {
+              propertyId_portalId: {
+                propertyId: propertyId,
+                portalId: portal.id,
+              },
+            },
+            update: {
+              externalListingId: item.result.externalListingId || null,
+              portalUrl: item.result.portalUrl || null,
+              status: 'PUBLISHED',
+              publishedAt: new Date(),
+              lastSyncedAt: new Date(),
+              errorMessage: null,
+            },
+            create: {
               propertyId: propertyId,
               portalId: portal.id,
+              externalListingId: item.result.externalListingId || null,
+              portalUrl: item.result.portalUrl || null,
+              status: 'PUBLISHED',
+              publishedAt: new Date(),
+              lastSyncedAt: new Date(),
             },
-          },
-          update: {
-            status: 'PENDING',
-            lastSyncedAt: new Date(),
-          },
-          create: {
-            propertyId: propertyId,
-            portalId: portal.id,
-            status: 'PENDING',
-          },
-        });
+          });
 
+          results.push({
+            portal: item.portal,
+            success: true,
+            message: `${portal.name} portalina basariyla yayinlandi`,
+            external_id: publishRecord.externalListingId || undefined,
+          });
+        } else {
+          await prisma.portalListing.upsert({
+            where: {
+              propertyId_portalId: {
+                propertyId: propertyId,
+                portalId: portal.id,
+              },
+            },
+            update: {
+              status: 'REJECTED',
+              errorMessage: item.result.error || 'Bilinmeyen hata',
+              lastSyncedAt: new Date(),
+            },
+            create: {
+              propertyId: propertyId,
+              portalId: portal.id,
+              status: 'REJECTED',
+              errorMessage: item.result.error || 'Bilinmeyen hata',
+            },
+          });
+
+          results.push({
+            portal: item.portal,
+            success: false,
+            message: `${portal.name} portalina gonderme basarisiz: ${item.result.error}`,
+          });
+        }
+      } catch (dbError) {
+        logger.error(`Portal kayit hatasi (${item.portal}):`, dbError);
         results.push({
-          portal: portalSlug,
-          success: true,
-          message: `${portalSlug} portalina gonderildi`,
-          external_id: publishRecord.externalListingId || undefined,
-        });
-      } catch (error) {
-        logger.error(`Portal yayinlama hatasi (${portalSlug}):`, error);
-        results.push({
-          portal: portalSlug,
+          portal: item.portal,
           success: false,
-          message: `${portalSlug} portalina gonderme basarisiz`,
+          message: `${portal.name} veritabani kaydi basarisiz`,
         });
       }
     }
 
+    logger.info(
+      `Portal yayinlama tamamlandi: ilan ${propertyId}, ${syndicationResult.successCount} basarili, ${syndicationResult.failureCount} basarisiz`
+    );
+
+    // 5. Return results
     return results;
   }
 

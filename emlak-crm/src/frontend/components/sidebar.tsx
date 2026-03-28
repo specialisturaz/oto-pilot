@@ -116,18 +116,16 @@ export function Sidebar() {
           <Avatar className="h-9 w-9">
             <AvatarImage src={user?.avatar_url} />
             <AvatarFallback>
-              {user?.full_name
-                ?.split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toLocaleUpperCase('tr-TR') || "U"}
+              {user?.firstName && user?.lastName
+                ? `${user.firstName[0]}${user.lastName[0]}`.toLocaleUpperCase('tr-TR')
+                : "U"}
             </AvatarFallback>
           </Avatar>
           {!sidebarCollapsed && (
             <div className="flex flex-1 items-center justify-between">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">
-                  {user?.full_name || "Kullanici"}
+                  {user?.firstName ? `${user.firstName} ${user.lastName}` : "Kullanici"}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
                   {user?.role || "Danisman"}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Plus,
   MoreHorizontal,
@@ -9,13 +10,16 @@ import {
   Phone,
   Calendar,
   ArrowRight,
+  HandshakeIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn, formatPrice, formatPriceShort } from "@/lib/utils";
+import api from "@/lib/api";
 
 // Pipeline stages in Turkish
 const stages = [
@@ -29,117 +33,21 @@ const stages = [
   { id: "tamamlandi", label: "Tamamlandi", color: "bg-green-600" },
 ];
 
-// Mock deals data
-const initialDeals: Record<string, Deal[]> = {
-  talep: [
-    {
-      id: "1",
-      contact_name: "Ahmet Yilmaz",
-      property_title: "Kadikoy 3+1 Daire",
-      price: 4500000,
-      agent: "Mehmet D.",
-      created_at: "2026-03-20",
-      priority: "high",
-    },
-    {
-      id: "2",
-      contact_name: "Fatma Demir",
-      property_title: "Atasehir 2+1 Residence",
-      price: 25000,
-      agent: "Ayse D.",
-      created_at: "2026-03-22",
-      priority: "medium",
-      is_rental: true,
-    },
-  ],
-  gosterim: [
-    {
-      id: "3",
-      contact_name: "Mustafa Kaya",
-      property_title: "Besiktas Villa",
-      price: 18500000,
-      agent: "Mehmet D.",
-      created_at: "2026-03-18",
-      priority: "high",
-    },
-  ],
-  pazarlik: [
-    {
-      id: "4",
-      contact_name: "Zeynep Arslan",
-      property_title: "Bakirkoy 4+1 Dublex",
-      price: 7800000,
-      agent: "Ayse D.",
-      created_at: "2026-03-15",
-      priority: "medium",
-    },
-    {
-      id: "5",
-      contact_name: "Ali Celik",
-      property_title: "Sisli Ofis",
-      price: 45000,
-      agent: "Mehmet D.",
-      created_at: "2026-03-17",
-      priority: "low",
-      is_rental: true,
-    },
-  ],
-  teklif: [
-    {
-      id: "6",
-      contact_name: "Elif Ozturk",
-      property_title: "Kadikoy Deniz Manzarali",
-      price: 6200000,
-      agent: "Ayse D.",
-      created_at: "2026-03-10",
-      priority: "high",
-    },
-  ],
-  kapora: [
-    {
-      id: "7",
-      contact_name: "Hasan Yildiz",
-      property_title: "Maltepe 3+1 Yeni",
-      price: 3800000,
-      agent: "Mehmet D.",
-      created_at: "2026-03-08",
-      priority: "high",
-    },
-  ],
-  sozlesme: [
-    {
-      id: "8",
-      contact_name: "Merve Sahin",
-      property_title: "Uskudar 2+1 Daire",
-      price: 2900000,
-      agent: "Ayse D.",
-      created_at: "2026-03-05",
-      priority: "medium",
-    },
-  ],
-  tapu: [],
-  tamamlandi: [
-    {
-      id: "9",
-      contact_name: "Emre Korkmaz",
-      property_title: "Beylikduzu 3+1",
-      price: 2400000,
-      agent: "Mehmet D.",
-      created_at: "2026-02-20",
-      priority: "low",
-    },
-  ],
-};
-
 interface Deal {
   id: string;
-  contact_name: string;
-  property_title: string;
+  contact_name?: string;
+  contactName?: string;
+  property_title?: string;
+  propertyTitle?: string;
   price: number;
-  agent: string;
-  created_at: string;
-  priority: "high" | "medium" | "low";
+  agent?: string;
+  agentName?: string;
+  created_at?: string;
+  createdAt?: string;
+  priority?: "high" | "medium" | "low";
   is_rental?: boolean;
+  isRental?: boolean;
+  stage?: string;
 }
 
 const priorityColors: Record<string, string> = {
@@ -148,15 +56,59 @@ const priorityColors: Record<string, string> = {
   low: "border-l-green-500",
 };
 
+function groupDealsByStage(dealsList: Deal[]): Record<string, Deal[]> {
+  const grouped: Record<string, Deal[]> = {};
+  stages.forEach((s) => {
+    grouped[s.id] = [];
+  });
+  dealsList.forEach((deal) => {
+    const stage = (deal.stage || "talep").toLocaleLowerCase("tr-TR");
+    if (grouped[stage]) {
+      grouped[stage].push(deal);
+    } else {
+      grouped.talep.push(deal);
+    }
+  });
+  return grouped;
+}
+
 export default function SatislarPage() {
-  const [deals] = useState(initialDeals);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["deals"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/deals");
+      return res.data?.data || res.data;
+    },
+    retry: false,
+  });
+
+  const dealsList: Deal[] = data?.items || data?.deals || (Array.isArray(data) ? data : []);
+  const deals = groupDealsByStage(dealsList);
 
   // Calculate totals
   const totalDeals = Object.values(deals).flat().length;
   const totalValue = Object.values(deals)
     .flat()
-    .filter((d) => !d.is_rental)
-    .reduce((sum, d) => sum + d.price, 0);
+    .filter((d) => !d.is_rental && !d.isRental)
+    .reduce((sum, d) => sum + (d.price || 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="mt-2 h-4 w-72" />
+        </div>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="w-[300px] shrink-0">
+              <Skeleton className="h-[400px] w-full rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -176,6 +128,19 @@ export default function SatislarPage() {
           Yeni Satis
         </Button>
       </div>
+
+      {/* Error state */}
+      {isError && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <HandshakeIcon className="h-12 w-12 text-muted-foreground/30" />
+            <h3 className="mt-4 text-lg font-semibold">Veriler yuklenemedi</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Backend baglantisi kontrol ediniz.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pipeline Summary */}
       <div className="flex gap-1 overflow-x-auto pb-2">
@@ -201,8 +166,8 @@ export default function SatislarPage() {
         {stages.map((stage) => {
           const stageDeals = deals[stage.id] || [];
           const stageTotal = stageDeals
-            .filter((d) => !d.is_rental)
-            .reduce((sum, d) => sum + d.price, 0);
+            .filter((d) => !d.is_rental && !d.isRental)
+            .reduce((sum, d) => sum + (d.price || 0), 0);
 
           return (
             <div
@@ -238,97 +203,106 @@ export default function SatislarPage() {
               )}
 
               {/* Deal Cards */}
-              {/* TODO: Implement drag-and-drop with @dnd-kit/core or react-beautiful-dnd */}
               <div className="flex-1 space-y-2 overflow-y-auto p-2 scrollbar-thin">
-                {stageDeals.map((deal) => (
-                  <Card
-                    key={deal.id}
-                    className={cn(
-                      "border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
-                      priorityColors[deal.priority]
-                    )}
-                  >
-                    <CardContent className="p-3">
-                      <div className="space-y-2">
-                        {/* Deal Header */}
-                        <div className="flex items-start justify-between">
-                          <h4 className="text-sm font-medium line-clamp-1">
-                            {deal.property_title}
-                          </h4>
-                          <DropdownMenu.Root>
-                            <DropdownMenu.Trigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0"
-                              >
-                                <MoreHorizontal className="h-3.5 w-3.5" />
-                              </Button>
-                            </DropdownMenu.Trigger>
-                            <DropdownMenu.Portal>
-                              <DropdownMenu.Content
-                                className="z-50 min-w-[140px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-                                align="end"
-                              >
-                                <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
-                                  Detay Goruntule
-                                </DropdownMenu.Item>
-                                <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
-                                  Duzenle
-                                </DropdownMenu.Item>
-                                <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
-                                  <ArrowRight className="h-3.5 w-3.5" />
-                                  Sonraki Asama
-                                </DropdownMenu.Item>
-                                <DropdownMenu.Separator className="my-1 h-px bg-border" />
-                                <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive outline-none hover:bg-destructive/10">
-                                  Iptal Et
-                                </DropdownMenu.Item>
-                              </DropdownMenu.Content>
-                            </DropdownMenu.Portal>
-                          </DropdownMenu.Root>
-                        </div>
-
-                        {/* Contact Info */}
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          {deal.contact_name}
-                        </div>
-
-                        {/* Price */}
-                        <p className="text-sm font-bold text-primary">
-                          {formatPrice(deal.price)}
-                          {deal.is_rental && (
-                            <span className="text-xs font-normal text-muted-foreground">
-                              /ay
-                            </span>
-                          )}
-                        </p>
-
-                        {/* Footer */}
-                        <div className="flex items-center justify-between pt-1 border-t">
-                          <div className="flex items-center gap-1">
-                            <Avatar className="h-5 w-5">
-                              <AvatarFallback className="text-[10px]">
-                                {deal.agent
-                                  .split(" ")
-                                  .map((n) => n[0])
-                                  .join("")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs text-muted-foreground">
-                              {deal.agent}
-                            </span>
+                {stageDeals.map((deal) => {
+                  const contactName = deal.contact_name || deal.contactName || "-";
+                  const propertyTitle = deal.property_title || deal.propertyTitle || "-";
+                  const agentName = deal.agent || deal.agentName || "-";
+                  const createdAt = deal.created_at || deal.createdAt || "";
+                  const isRental = deal.is_rental || deal.isRental;
+                  const priority = deal.priority || "medium";
+                  return (
+                    <Card
+                      key={deal.id}
+                      className={cn(
+                        "border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow",
+                        priorityColors[priority] || priorityColors.medium
+                      )}
+                    >
+                      <CardContent className="p-3">
+                        <div className="space-y-2">
+                          {/* Deal Header */}
+                          <div className="flex items-start justify-between">
+                            <h4 className="text-sm font-medium line-clamp-1">
+                              {propertyTitle}
+                            </h4>
+                            <DropdownMenu.Root>
+                              <DropdownMenu.Trigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 shrink-0"
+                                >
+                                  <MoreHorizontal className="h-3.5 w-3.5" />
+                                </Button>
+                              </DropdownMenu.Trigger>
+                              <DropdownMenu.Portal>
+                                <DropdownMenu.Content
+                                  className="z-50 min-w-[140px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+                                  align="end"
+                                >
+                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
+                                    Detay Goruntule
+                                  </DropdownMenu.Item>
+                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
+                                    Duzenle
+                                  </DropdownMenu.Item>
+                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                    Sonraki Asama
+                                  </DropdownMenu.Item>
+                                  <DropdownMenu.Separator className="my-1 h-px bg-border" />
+                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive outline-none hover:bg-destructive/10">
+                                    Iptal Et
+                                  </DropdownMenu.Item>
+                                </DropdownMenu.Content>
+                              </DropdownMenu.Portal>
+                            </DropdownMenu.Root>
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {deal.created_at.split("-").reverse().slice(0, 2).join("/")}
+
+                          {/* Contact Info */}
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            {contactName}
+                          </div>
+
+                          {/* Price */}
+                          <p className="text-sm font-bold text-primary">
+                            {formatPrice(deal.price || 0)}
+                            {isRental && (
+                              <span className="text-xs font-normal text-muted-foreground">
+                                /ay
+                              </span>
+                            )}
+                          </p>
+
+                          {/* Footer */}
+                          <div className="flex items-center justify-between pt-1 border-t">
+                            <div className="flex items-center gap-1">
+                              <Avatar className="h-5 w-5">
+                                <AvatarFallback className="text-[10px]">
+                                  {agentName
+                                    .split(" ")
+                                    .map((n: string) => n[0])
+                                    .join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs text-muted-foreground">
+                                {agentName}
+                              </span>
+                            </div>
+                            {createdAt && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {createdAt.split("T")[0]?.split("-").reverse().slice(0, 2).join("/")}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
 
                 {/* Empty State */}
                 {stageDeals.length === 0 && (

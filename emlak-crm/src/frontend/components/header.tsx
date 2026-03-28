@@ -82,15 +82,13 @@ export function Header() {
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user?.avatar_url} />
                 <AvatarFallback>
-                  {user?.full_name
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toLocaleUpperCase('tr-TR') || "U"}
+                  {user?.firstName && user?.lastName
+                    ? `${user.firstName[0]}${user.lastName[0]}`.toLocaleUpperCase('tr-TR')
+                    : "U"}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden text-sm font-medium md:inline-block">
-                {user?.full_name || "Kullanici"}
+                {user?.firstName ? `${user.firstName} ${user.lastName}` : "Kullanici"}
               </span>
             </Button>
           </DropdownMenu.Trigger>

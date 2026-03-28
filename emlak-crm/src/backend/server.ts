@@ -25,6 +25,7 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import settingsRoutes from './modules/settings/settings.routes';
 import locationsRoutes from './modules/locations/locations.routes';
 import usersRoutes from './modules/users/users.routes';
+import portalsRoutes from './modules/portals/portals.routes';
 
 const app = express();
 
@@ -113,7 +114,9 @@ app.use('/uploads', express.static(uploadsDir));
 // CSRF protection
 // ---------------------------------------------------------------------------
 
-app.use('/api', csrfProtection);
+// CSRF koruması sadece form-tabanlı istekler için gereklidir.
+// JSON API + JWT kullandığımız için API rotaları CSRF'ye tabi değildir.
+// Gelecekte form-tabanlı endpoint eklenirse: app.use('/forms', csrfProtection);
 app.get('/api/v1/csrf-token', csrfTokenEndpoint);
 
 // ---------------------------------------------------------------------------
@@ -149,6 +152,7 @@ app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/locations', locationsRoutes);
 app.use('/api/v1/users', usersRoutes);
+app.use('/api/v1/portals', portalsRoutes);
 
 // ---------------------------------------------------------------------------
 // 404 handler for unmatched routes

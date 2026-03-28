@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import Image from "next/image";
 import {
   Search,
@@ -26,117 +28,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatPrice, formatArea } from "@/lib/utils";
-
-// Mock data
-const properties = [
-  {
-    id: "1",
-    title: "Kadikoy Merkez 3+1 Daire",
-    type: "Daire",
-    listing_type: "Satilik",
-    price: 4500000,
-    location: "Kadikoy, Istanbul",
-    rooms: "3+1",
-    bathrooms: 2,
-    area: 145,
-    floor: "5/8",
-    image: null,
-    status: "aktif",
-    portal_count: 3,
-    view_count: 245,
-    created_at: "2026-03-15",
-  },
-  {
-    id: "2",
-    title: "Besiktas Deniz Manzarali Villa",
-    type: "Villa",
-    listing_type: "Satilik",
-    price: 18500000,
-    location: "Besiktas, Istanbul",
-    rooms: "5+2",
-    bathrooms: 4,
-    area: 320,
-    floor: "Mustakil",
-    image: null,
-    status: "aktif",
-    portal_count: 4,
-    view_count: 512,
-    created_at: "2026-03-10",
-  },
-  {
-    id: "3",
-    title: "Atasehir Residence 2+1",
-    type: "Daire",
-    listing_type: "Kiralik",
-    price: 25000,
-    location: "Atasehir, Istanbul",
-    rooms: "2+1",
-    bathrooms: 1,
-    area: 95,
-    floor: "12/20",
-    image: null,
-    status: "aktif",
-    portal_count: 2,
-    view_count: 189,
-    created_at: "2026-03-20",
-  },
-  {
-    id: "4",
-    title: "Bakirkoy 4+1 Dublex",
-    type: "Daire",
-    listing_type: "Satilik",
-    price: 7800000,
-    location: "Bakirkoy, Istanbul",
-    rooms: "4+1",
-    bathrooms: 2,
-    area: 210,
-    floor: "7-8/8",
-    image: null,
-    status: "aktif",
-    portal_count: 3,
-    view_count: 167,
-    created_at: "2026-03-18",
-  },
-  {
-    id: "5",
-    title: "Pendik Satilik Arsa",
-    type: "Arsa",
-    listing_type: "Satilik",
-    price: 3200000,
-    location: "Pendik, Istanbul",
-    rooms: "-",
-    bathrooms: 0,
-    area: 500,
-    floor: "-",
-    image: null,
-    status: "beklemede",
-    portal_count: 1,
-    view_count: 78,
-    created_at: "2026-03-22",
-  },
-  {
-    id: "6",
-    title: "Sisli Merkez Ofis",
-    type: "Isyeri",
-    listing_type: "Kiralik",
-    price: 45000,
-    location: "Sisli, Istanbul",
-    rooms: "Acik Plan",
-    bathrooms: 2,
-    area: 180,
-    floor: "3/10",
-    image: null,
-    status: "aktif",
-    portal_count: 2,
-    view_count: 134,
-    created_at: "2026-03-25",
-  },
-];
+import api from "@/lib/api";
 
 const propertyStatusMap: Record<string, { label: string; variant: "success" | "warning" | "secondary" }> = {
+  active: { label: "Aktif", variant: "success" },
   aktif: { label: "Aktif", variant: "success" },
+  pending: { label: "Beklemede", variant: "warning" },
   beklemede: { label: "Beklemede", variant: "warning" },
+  inactive: { label: "Pasif", variant: "secondary" },
   pasif: { label: "Pasif", variant: "secondary" },
 };
 
@@ -147,15 +48,21 @@ export default function IlanlarPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [listingTypeFilter, setListingTypeFilter] = useState("all");
 
-  const filteredProperties = properties.filter((p) => {
-    const matchesSearch =
-      p.title.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR')) ||
-      p.location.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR'));
-    const matchesType = typeFilter === "all" || p.type === typeFilter;
-    const matchesListingType =
-      listingTypeFilter === "all" || p.listing_type === listingTypeFilter;
-    return matchesSearch && matchesType && matchesListingType;
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["properties", searchQuery, typeFilter, listingTypeFilter],
+    queryFn: async () => {
+      const params: Record<string, string | number> = {};
+      if (searchQuery) params.search = searchQuery;
+      if (typeFilter !== "all") params.type = typeFilter;
+      if (listingTypeFilter !== "all") params.listingType = listingTypeFilter;
+      const res = await api.get("/api/v1/properties", { params });
+      return res.data?.data || res.data;
+    },
+    retry: false,
   });
+
+  const properties = data?.items || data?.properties || (Array.isArray(data) ? data : []);
+  const totalCount = data?.total || data?.totalCount || properties.length;
 
   return (
     <div className="space-y-6">
@@ -164,13 +71,15 @@ export default function IlanlarPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ilanlar</h1>
           <p className="text-muted-foreground">
-            Toplam {properties.length} ilan kaydi
+            {isLoading ? "Yukleniyor..." : `Toplam ${totalCount} ilan kaydi`}
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Yeni Ilan
-        </Button>
+        <Link href="/ilanlar/yeni">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Yeni Ilan
+          </Button>
+        </Link>
       </div>
 
       {/* Search, Filters and View Toggle */}
@@ -275,149 +184,192 @@ export default function IlanlarPage() {
         </CardContent>
       </Card>
 
-      {/* Properties Grid */}
-      {viewMode === "grid" ? (
+      {/* Loading State */}
+      {isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredProperties.map((property) => {
-            const status = propertyStatusMap[property.status];
-            return (
-              <Card
-                key={property.id}
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-              >
-                {/* Image Placeholder */}
-                <div className="relative h-48 bg-muted">
-                  <div className="flex h-full items-center justify-center">
-                    <Building2 className="h-12 w-12 text-muted-foreground/30" />
-                  </div>
-                  <div className="absolute left-3 top-3 flex gap-2">
-                    <Badge
-                      variant={
-                        property.listing_type === "Satilik"
-                          ? "default"
-                          : "info"
-                      }
-                    >
-                      {property.listing_type}
-                    </Badge>
-                    <Badge variant={status.variant}>{status.label}</Badge>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-3 top-3 h-8 w-8 bg-white/80 hover:bg-white"
-                  >
-                    <Heart className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="font-semibold line-clamp-1">
-                        {property.title}
-                      </h3>
-                      <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {property.location}
-                      </div>
-                    </div>
-
-                    <p className="text-xl font-bold text-primary">
-                      {formatPrice(property.price)}
-                      {property.listing_type === "Kiralik" && (
-                        <span className="text-sm font-normal text-muted-foreground">
-                          /ay
-                        </span>
-                      )}
-                    </p>
-
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      {property.rooms !== "-" && (
-                        <div className="flex items-center gap-1">
-                          <BedDouble className="h-4 w-4" />
-                          {property.rooms}
-                        </div>
-                      )}
-                      {property.bathrooms > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Bath className="h-4 w-4" />
-                          {property.bathrooms}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <Maximize2 className="h-4 w-4" />
-                        {formatArea(property.area)}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-                      <span>{property.portal_count} portal</span>
-                      <span>{property.view_count} goruntulenme</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4">
+                <Skeleton className="h-48 w-full rounded-lg" />
+                <Skeleton className="mt-3 h-5 w-3/4" />
+                <Skeleton className="mt-2 h-4 w-1/2" />
+                <Skeleton className="mt-2 h-6 w-1/3" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      ) : (
-        /* List View */
+      )}
+
+      {/* Error State */}
+      {isError && !isLoading && (
         <Card>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {filteredProperties.map((property) => {
-                const status = propertyStatusMap[property.status];
-                return (
-                  <div
-                    key={property.id}
-                    className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors cursor-pointer"
-                  >
-                    {/* Thumbnail */}
-                    <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Building2 className="h-8 w-8 text-muted-foreground/30" />
-                    </div>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Building2 className="h-12 w-12 text-muted-foreground/30" />
+            <h3 className="mt-4 text-lg font-semibold">Veriler yuklenemedi</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Backend baglantisi kontrol ediniz.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold truncate">
-                          {property.title}
-                        </h3>
-                        <Badge variant={status.variant} className="shrink-0">
-                          {status.label}
-                        </Badge>
-                      </div>
-                      <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {property.location}
-                      </div>
-                      <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
-                        {property.rooms !== "-" && (
-                          <span>{property.rooms}</span>
-                        )}
-                        <span>{formatArea(property.area)}</span>
-                        <span>Kat: {property.floor}</span>
-                      </div>
+      {/* Properties Grid */}
+      {!isLoading && !isError && viewMode === "grid" && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {properties.map((property: Record<string, unknown>) => {
+            const statusKey = String(property.status || "aktif");
+            const status = propertyStatusMap[statusKey] || propertyStatusMap.aktif;
+            const listingType = String(property.listing_type || property.listingType || "Satilik");
+            const price = Number(property.price || 0);
+            const area = Number(property.area || property.areaNet || 0);
+            const rooms = String(property.rooms || "-");
+            const bathrooms = Number(property.bathrooms || 0);
+            return (
+              <Link key={String(property.id)} href={`/ilanlar/${property.id}`}>
+                <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                  {/* Image Placeholder */}
+                  <div className="relative h-48 bg-muted">
+                    <div className="flex h-full items-center justify-center">
+                      <Building2 className="h-12 w-12 text-muted-foreground/30" />
                     </div>
-
-                    {/* Price */}
-                    <div className="text-right shrink-0">
-                      <p className="text-lg font-bold text-primary">
-                        {formatPrice(property.price)}
-                      </p>
+                    <div className="absolute left-3 top-3 flex gap-2">
                       <Badge
                         variant={
-                          property.listing_type === "Satilik"
+                          listingType === "Satilik"
                             ? "default"
                             : "info"
                         }
-                        className="mt-1"
                       >
-                        {property.listing_type}
+                        {listingType}
                       </Badge>
+                      <Badge variant={status.variant}>{status.label}</Badge>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-3 top-3 h-8 w-8 bg-white/80 hover:bg-white"
+                    >
+                      <Heart className="h-4 w-4" />
+                    </Button>
                   </div>
+
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="font-semibold line-clamp-1">
+                          {String(property.title || "")}
+                        </h3>
+                        <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {String(property.location || "")}
+                        </div>
+                      </div>
+
+                      <p className="text-xl font-bold text-primary">
+                        {formatPrice(price)}
+                        {listingType === "Kiralik" && (
+                          <span className="text-sm font-normal text-muted-foreground">
+                            /ay
+                          </span>
+                        )}
+                      </p>
+
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        {rooms !== "-" && (
+                          <div className="flex items-center gap-1">
+                            <BedDouble className="h-4 w-4" />
+                            {rooms}
+                          </div>
+                        )}
+                        {bathrooms > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Bath className="h-4 w-4" />
+                            {bathrooms}
+                          </div>
+                        )}
+                        {area > 0 && (
+                          <div className="flex items-center gap-1">
+                            <Maximize2 className="h-4 w-4" />
+                            {formatArea(area)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
+                        <span>{String(property.portal_count || property.portalCount || 0)} portal</span>
+                        <span>{String(property.view_count || property.viewCount || 0)} goruntulenme</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {/* List View */}
+      {!isLoading && !isError && viewMode === "list" && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {properties.map((property: Record<string, unknown>) => {
+                const statusKey = String(property.status || "aktif");
+                const status = propertyStatusMap[statusKey] || propertyStatusMap.aktif;
+                const listingType = String(property.listing_type || property.listingType || "Satilik");
+                const price = Number(property.price || 0);
+                const area = Number(property.area || property.areaNet || 0);
+                const rooms = String(property.rooms || "-");
+                const floor = String(property.floor || "-");
+                return (
+                  <Link key={String(property.id)} href={`/ilanlar/${property.id}`}>
+                    <div className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors cursor-pointer">
+                      {/* Thumbnail */}
+                      <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Building2 className="h-8 w-8 text-muted-foreground/30" />
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold truncate">
+                            {String(property.title || "")}
+                          </h3>
+                          <Badge variant={status.variant} className="shrink-0">
+                            {status.label}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {String(property.location || "")}
+                        </div>
+                        <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
+                          {rooms !== "-" && (
+                            <span>{rooms}</span>
+                          )}
+                          {area > 0 && <span>{formatArea(area)}</span>}
+                          <span>Kat: {floor}</span>
+                        </div>
+                      </div>
+
+                      {/* Price */}
+                      <div className="text-right shrink-0">
+                        <p className="text-lg font-bold text-primary">
+                          {formatPrice(price)}
+                        </p>
+                        <Badge
+                          variant={
+                            listingType === "Satilik"
+                              ? "default"
+                              : "info"
+                          }
+                          className="mt-1"
+                        >
+                          {listingType}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
@@ -426,7 +378,7 @@ export default function IlanlarPage() {
       )}
 
       {/* Empty State */}
-      {filteredProperties.length === 0 && (
+      {!isLoading && !isError && properties.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Building2 className="h-12 w-12 text-muted-foreground/30" />

@@ -1,4 +1,4 @@
-import { logger } from '../../backend/utils/logger.js';
+import logger from '../../backend/utils/logger.js';
 
 export interface PortalProperty {
   id: string;

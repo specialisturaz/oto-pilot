@@ -55,7 +55,7 @@ export class EmlakjetAdapter extends BasePortalAdapter {
         return { success: false, error: `Emlakjet hata: ${response.status}` };
       }
 
-      const result = await response.json();
+      const result = await response.json() as Record<string, any>;
       return {
         success: true,
         externalListingId: result.data?.id,
@@ -119,7 +119,7 @@ export class EmlakjetAdapter extends BasePortalAdapter {
         return { success: false, error: `İstatistik hatası: ${response.status}` };
       }
 
-      const data = await response.json();
+      const data = await response.json() as Record<string, any>;
       return {
         success: true,
         viewsCount: data.data?.pageViews || 0,
@@ -140,7 +140,7 @@ export class EmlakjetAdapter extends BasePortalAdapter {
 
       if (!response.ok) return [];
 
-      const data = await response.json();
+      const data = await response.json() as Record<string, any>;
       return data.data || [];
     } catch {
       return [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   Users,
   Building2,
@@ -33,96 +34,134 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatPrice, formatRelativeDate } from "@/lib/utils";
+import api from "@/lib/api";
 
-// Mock data - will be replaced with API calls
-const pipelineData = [
-  { name: "Talep", value: 24 },
-  { name: "Gosterim", value: 18 },
-  { name: "Pazarlik", value: 12 },
-  { name: "Teklif", value: 8 },
-  { name: "Kapora", value: 5 },
-  { name: "Sozlesme", value: 3 },
-  { name: "Tapu", value: 2 },
+// Fallback mock data - used when API is unavailable
+const fallbackPipelineData = [
+  { name: "Talep", value: 0 },
+  { name: "Gosterim", value: 0 },
+  { name: "Pazarlik", value: 0 },
+  { name: "Teklif", value: 0 },
+  { name: "Kapora", value: 0 },
+  { name: "Sozlesme", value: 0 },
+  { name: "Tapu", value: 0 },
 ];
 
-const portalData = [
+const fallbackPortalData = [
   { name: "Sahibinden", value: 45, color: "#1a3a8a" },
   { name: "Hepsiemlak", value: 30, color: "#e30a17" },
   { name: "Emlakjet", value: 15, color: "#f59e0b" },
   { name: "Diger", value: 10, color: "#6b7280" },
 ];
 
-const recentActivities = [
+const fallbackActivities = [
   {
     id: 1,
     type: "call",
-    description: "Ahmet Yilmaz ile telefon gorusmesi yapildi",
-    time: new Date(Date.now() - 1000 * 60 * 30),
+    description: "Henuz aktivite bulunmuyor",
+    time: new Date(),
     icon: Phone,
   },
-  {
-    id: 2,
-    type: "showing",
-    description: "Kadikoy 3+1 daire gosterimi tamamlandi",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    icon: Eye,
-  },
-  {
-    id: 3,
-    type: "deal",
-    description: "Besiktas villa icin teklif alindi",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    icon: HandshakeIcon,
-  },
-  {
-    id: 4,
-    type: "listing",
-    description: "Yeni ilan eklendi: Atasehir 2+1 Daire",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 8),
-    icon: Building2,
-  },
-  {
-    id: 5,
-    type: "contact",
-    description: "Yeni musteri kaydedildi: Fatma Demir",
-    time: new Date(Date.now() - 1000 * 60 * 60 * 12),
-    icon: Users,
-  },
 ];
 
-const upcomingTasks = [
+const fallbackTasks = [
   {
     id: 1,
-    title: "Kadikoy daire gosterimi",
-    customer: "Mehmet Ozturk",
-    date: "Bugun, 14:00",
-    type: "showing",
-  },
-  {
-    id: 2,
-    title: "Sozlesme imzalama",
-    customer: "Ayse Kaya",
-    date: "Bugun, 16:30",
-    type: "contract",
-  },
-  {
-    id: 3,
-    title: "Fiyat gorusmesi",
-    customer: "Ali Celik",
-    date: "Yarin, 10:00",
-    type: "negotiation",
-  },
-  {
-    id: 4,
-    title: "Tapu devir islemleri",
-    customer: "Zeynep Arslan",
-    date: "Yarin, 14:00",
-    type: "deed",
+    title: "Henuz gorev bulunmuyor",
+    customer: "-",
+    date: "-",
+    type: "info",
   },
 ];
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="mt-2 h-4 w-72" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-20 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
+          <CardContent className="p-6">
+            <Skeleton className="h-[300px] w-full" />
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-3">
+          <CardContent className="p-6">
+            <Skeleton className="h-[300px] w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/reports/dashboard-stats");
+      return res.data?.data || res.data;
+    },
+    retry: false,
+  });
+
+  const { data: recentActivitiesData } = useQuery({
+    queryKey: ["recent-activities"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/activities", {
+        params: { limit: 5 },
+      });
+      return res.data?.data || res.data;
+    },
+    retry: false,
+  });
+
+  // Map icon for activity type
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case "call":
+        return Phone;
+      case "showing":
+        return Eye;
+      case "deal":
+        return HandshakeIcon;
+      case "listing":
+        return Building2;
+      case "contact":
+        return Users;
+      default:
+        return Clock;
+    }
+  };
+
+  const totalContacts = statsData?.totalContacts ?? "-";
+  const activeProperties = statsData?.activeProperties ?? "-";
+  const openDeals = statsData?.openDeals ?? "-";
+  const monthlyCommission = statsData?.monthlyCommission ?? 0;
+
+  const pipelineData = statsData?.pipelineData || fallbackPipelineData;
+  const portalData = statsData?.portalData || fallbackPortalData;
+
+  const recentActivities = recentActivitiesData?.items || recentActivitiesData || null;
+  const upcomingTasks = statsData?.upcomingTasks || fallbackTasks;
+
+  if (statsLoading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Title */}
@@ -139,26 +178,26 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Toplam Musteri"
-          value="1.248"
-          change="+12% gecen aya gore"
-          changeType="positive"
+          value={String(totalContacts)}
+          change=""
+          changeType="neutral"
           icon={Users}
           iconColor="text-blue-600"
           iconBgColor="bg-blue-100"
         />
         <StatsCard
           title="Aktif Ilan"
-          value="384"
-          change="+5 bu hafta"
-          changeType="positive"
+          value={String(activeProperties)}
+          change=""
+          changeType="neutral"
           icon={Building2}
           iconColor="text-emerald-600"
           iconBgColor="bg-emerald-100"
         />
         <StatsCard
           title="Acik Satis"
-          value="67"
-          change="8 tamamlanmaya yakin"
+          value={String(openDeals)}
+          change=""
           changeType="neutral"
           icon={HandshakeIcon}
           iconColor="text-amber-600"
@@ -166,9 +205,9 @@ export default function DashboardPage() {
         />
         <StatsCard
           title="Aylik Komisyon"
-          value={formatPrice(285000)}
-          change="+18% gecen aya gore"
-          changeType="positive"
+          value={typeof monthlyCommission === "number" ? formatPrice(monthlyCommission) : String(monthlyCommission)}
+          change=""
+          changeType="neutral"
           icon={TrendingUp}
           iconColor="text-primary"
           iconBgColor="bg-primary/10"
@@ -243,8 +282,8 @@ export default function DashboardPage() {
                     paddingAngle={4}
                     dataKey="value"
                   >
-                    {portalData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {portalData.map((entry: { color?: string }, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || "#6b7280"} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -259,7 +298,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
             <div className="mt-4 space-y-2">
-              {portalData.map((portal) => (
+              {portalData.map((portal: { name: string; value: number; color?: string }) => (
                 <div
                   key={portal.name}
                   className="flex items-center justify-between text-sm"
@@ -267,7 +306,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <div
                       className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: portal.color }}
+                      style={{ backgroundColor: portal.color || "#6b7280" }}
                     />
                     <span>{portal.name}</span>
                   </div>
@@ -290,27 +329,40 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity) => {
-                const Icon = activity.icon;
-                return (
-                  <div
-                    key={activity.id}
-                    className="flex items-start gap-3"
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
+            {recentActivities && Array.isArray(recentActivities) && recentActivities.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivities.map((activity: { id?: string | number; type?: string; description?: string; createdAt?: string; time?: string | Date }, index: number) => {
+                  const Icon = getActivityIcon(activity.type || "");
+                  return (
+                    <div
+                      key={activity.id || index}
+                      className="flex items-start gap-3"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {activity.createdAt
+                            ? formatRelativeDate(activity.createdAt)
+                            : activity.time
+                              ? formatRelativeDate(activity.time)
+                              : ""}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">{activity.description}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatRelativeDate(activity.time)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Clock className="h-8 w-8 text-muted-foreground/30" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Henuz aktivite bulunmuyor
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -323,25 +375,34 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {upcomingTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{task.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {task.customer}
-                    </p>
+            {upcomingTasks && Array.isArray(upcomingTasks) && upcomingTasks.length > 0 ? (
+              <div className="space-y-4">
+                {upcomingTasks.map((task: { id?: string | number; title?: string; customer?: string; date?: string }, index: number) => (
+                  <div
+                    key={task.id || index}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{task.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {task.customer}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{task.date}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{task.date}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <CalendarDays className="h-8 w-8 text-muted-foreground/30" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Henuz planlanan gorev bulunmuyor
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

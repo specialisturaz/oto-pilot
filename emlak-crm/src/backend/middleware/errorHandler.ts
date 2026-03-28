@@ -127,11 +127,13 @@ export function globalErrorHandler(
 
   // Prisma validation errors
   if (err instanceof Prisma.PrismaClientValidationError) {
+    logger.error('Prisma validation error:', err.message);
     res.status(400).json({
       success: false,
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Veritabani dogrulama hatasi',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined,
       },
     });
     return;

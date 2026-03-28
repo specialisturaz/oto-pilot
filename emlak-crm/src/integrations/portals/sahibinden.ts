@@ -61,7 +61,7 @@ export class SahibindenAdapter extends BasePortalAdapter {
         return { success: false, error: `Sahibinden hata: ${response.status}` };
       }
 
-      const result = await response.json();
+      const result = await response.json() as Record<string, any>;
       return {
         success: true,
         externalListingId: result.classifiedId,
@@ -130,7 +130,7 @@ export class SahibindenAdapter extends BasePortalAdapter {
         return { success: false, error: `İstatistik hatası: ${response.status}` };
       }
 
-      const data = await response.json();
+      const data = await response.json() as Record<string, any>;
       return {
         success: true,
         viewsCount: data.viewCount || 0,
@@ -151,7 +151,7 @@ export class SahibindenAdapter extends BasePortalAdapter {
 
       if (!response.ok) return [];
 
-      const data = await response.json();
+      const data = await response.json() as Record<string, any>;
       return data.categories || [];
     } catch {
       return [];

@@ -40,7 +40,8 @@ import { cn, formatPhone, formatPrice, formatRelativeDate } from "@/lib/utils";
 // Mock data for a single contact
 const contact = {
   id: "1",
-  full_name: "Ahmet Yilmaz",
+  firstName: "Ahmet",
+  lastName: "Yilmaz",
   phone: "5321234567",
   email: "ahmet@email.com",
   tc_kimlik: "12345678901",
@@ -179,9 +180,14 @@ const interestColors: Record<string, string> = {
   Yatirimci: "bg-red-100 text-red-800",
 };
 
+function getFullName(c: { firstName?: string; lastName?: string }) {
+  return `${c.firstName || ""} ${c.lastName || ""}`.trim();
+}
+
 export default function MusteriDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const status = statusMap[contact.status];
+  const contactFullName = getFullName(contact);
 
   return (
     <div className="space-y-6">
@@ -201,7 +207,7 @@ export default function MusteriDetailPage() {
             <div className="flex items-start gap-4">
               <Avatar className="h-16 w-16">
                 <AvatarFallback className="text-lg">
-                  {contact.full_name
+                  {contactFullName
                     .split(" ")
                     .map((n) => n[0])
                     .join("")}
@@ -209,7 +215,7 @@ export default function MusteriDetailPage() {
               </Avatar>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold">{contact.full_name}</h1>
+                  <h1 className="text-xl font-bold">{contactFullName}</h1>
                   <Badge variant={status.variant}>{status.label}</Badge>
                   <Badge className={cn("text-xs", interestColors[contact.interest_type])}>
                     {contact.interest_type}
@@ -298,9 +304,9 @@ export default function MusteriDetailPage() {
                     Ad Soyad
                   </label>
                   {isEditing ? (
-                    <Input defaultValue={contact.full_name} />
+                    <Input defaultValue={contactFullName} />
                   ) : (
-                    <p className="text-sm">{contact.full_name}</p>
+                    <p className="text-sm">{contactFullName}</p>
                   )}
                 </div>
                 <div className="space-y-2">

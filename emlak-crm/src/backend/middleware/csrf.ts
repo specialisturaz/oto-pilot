@@ -46,12 +46,11 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
   }
 
   // -----------------------------------------------------------------------
-  // 3. Skip CSRF check when JWT auth is used (bearer token in header)
-  //    JWT-authenticated API requests are not vulnerable to CSRF because
-  //    the browser does not automatically attach the Authorization header.
+  // 3. Skip CSRF check for API routes (they use JWT or are public auth endpoints)
+  //    API requests are not vulnerable to CSRF because the browser does not
+  //    automatically attach the Authorization header or JSON Content-Type.
   // -----------------------------------------------------------------------
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
+  if (req.path.startsWith('/api/')) {
     return next();
   }
 
