@@ -26,6 +26,8 @@ import settingsRoutes from './modules/settings/settings.routes';
 import locationsRoutes from './modules/locations/locations.routes';
 import usersRoutes from './modules/users/users.routes';
 import portalsRoutes from './modules/portals/portals.routes';
+import activitiesRoutes from './modules/activities/activities.routes';
+import documentsRoutes from './modules/documents/documents.routes';
 
 const app = express();
 
@@ -153,6 +155,8 @@ app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/locations', locationsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/portals', portalsRoutes);
+app.use('/api/v1/activities', activitiesRoutes);
+app.use('/api/v1/documents', documentsRoutes);
 
 // ---------------------------------------------------------------------------
 // 404 handler for unmatched routes
