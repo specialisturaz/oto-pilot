@@ -9,6 +9,7 @@ import fs from 'fs';
 import config from './config';
 import logger, { requestLogFormat } from './utils/logger';
 import { globalErrorHandler } from './middleware/errorHandler';
+import { csrfProtection, csrfTokenEndpoint } from './middleware/csrf';
 
 // Route imports
 import authRoutes from './modules/auth/auth.routes';
@@ -33,13 +34,26 @@ const app = express();
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow serving uploaded images cross-origin
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'"],
+    },
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  frameguard: { action: 'deny' },            // X-Frame-Options: DENY
+  noSniff: true,                              // X-Content-Type-Options: nosniff
+  hsts: { maxAge: 31536000, includeSubDomains: true },
 }));
 
 app.use(cors({
   origin: config.server.frontendUrl,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
 }));
 
 app.use(compression());
@@ -94,6 +108,13 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 app.use('/uploads', express.static(uploadsDir));
+
+// ---------------------------------------------------------------------------
+// CSRF protection
+// ---------------------------------------------------------------------------
+
+app.use('/api', csrfProtection);
+app.get('/api/v1/csrf-token', csrfTokenEndpoint);
 
 // ---------------------------------------------------------------------------
 // Health check

@@ -120,7 +120,7 @@ export function Sidebar() {
                 ?.split(" ")
                 .map((n) => n[0])
                 .join("")
-                .toUpperCase() || "U"}
+                .toLocaleUpperCase('tr-TR') || "U"}
             </AvatarFallback>
           </Avatar>
           {!sidebarCollapsed && (

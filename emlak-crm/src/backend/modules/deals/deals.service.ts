@@ -175,7 +175,7 @@ export class DealsService {
     const deal = await prisma.deal.create({
       data: {
         type: (data as any).deal_type || 'SALE',
-        stage: ((data as any).stage || 'INQUIRY').toUpperCase() as any,
+        stage: ((data as any).stage || 'INQUIRY').toLocaleUpperCase('tr-TR') as any,
         propertyId: (data as any).property_id,
         contactId: (data as any).buyer_id || (data as any).contact_id,
         assignedUserId: (data as any).assigned_to_id || user.id,
@@ -282,7 +282,7 @@ export class DealsService {
     }
 
     const previousStage = existing.stage;
-    const newStage = (data.stage as string).toUpperCase() as any;
+    const newStage = (data.stage as string).toLocaleUpperCase('tr-TR') as any;
 
     // Validate that a completed deal cannot be moved backwards (admin can override)
     if (previousStage === 'COMPLETED' && user.role !== 'ADMIN') {

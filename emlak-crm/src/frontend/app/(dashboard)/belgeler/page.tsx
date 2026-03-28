@@ -161,8 +161,8 @@ export default function BelgelerPage() {
 
   const filteredDocuments = mockDocuments.filter((doc) => {
     const matchesSearch =
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.related_to.toLowerCase().includes(searchQuery.toLowerCase());
+      doc.name.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR')) ||
+      doc.related_to.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR'));
     const matchesFolder =
       !selectedFolder || doc.folder === selectedFolder;
     return matchesSearch && matchesFolder;

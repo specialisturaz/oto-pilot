@@ -4,8 +4,8 @@ export const registerSchema = z.object({
   email: z
     .string({ required_error: 'E-posta adresi gerekli' })
     .email('Gecerli bir e-posta adresi giriniz')
-    .toLowerCase()
-    .trim(),
+    .transform((val) => val.toLocaleLowerCase('tr-TR'))
+    .pipe(z.string().trim()),
   password: z
     .string({ required_error: 'Sifre gerekli' })
     .min(8, 'Sifre en az 8 karakter olmali')
@@ -35,8 +35,8 @@ export const loginSchema = z.object({
   email: z
     .string({ required_error: 'E-posta adresi gerekli' })
     .email('Gecerli bir e-posta adresi giriniz')
-    .toLowerCase()
-    .trim(),
+    .transform((val) => val.toLocaleLowerCase('tr-TR'))
+    .pipe(z.string().trim()),
   password: z
     .string({ required_error: 'Sifre gerekli' })
     .min(1, 'Sifre gerekli'),
@@ -52,8 +52,8 @@ export const forgotPasswordSchema = z.object({
   email: z
     .string({ required_error: 'E-posta adresi gerekli' })
     .email('Gecerli bir e-posta adresi giriniz')
-    .toLowerCase()
-    .trim(),
+    .transform((val) => val.toLocaleLowerCase('tr-TR'))
+    .pipe(z.string().trim()),
 });
 
 export const resetPasswordSchema = z.object({

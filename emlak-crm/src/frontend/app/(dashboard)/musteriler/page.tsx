@@ -108,9 +108,9 @@ export default function MusterilerPage() {
 
   const filteredCustomers = customers.filter((c) => {
     const matchesSearch =
-      c.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.full_name.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR')) ||
       c.phone.includes(searchQuery) ||
-      c.email.toLowerCase().includes(searchQuery.toLowerCase());
+      c.email.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR'));
     const matchesStatus =
       statusFilter === "all" || c.status === statusFilter;
     return matchesSearch && matchesStatus;

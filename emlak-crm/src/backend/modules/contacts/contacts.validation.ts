@@ -20,7 +20,7 @@ export const createContactSchema = z.object({
     .min(2, 'Soyad en az 2 karakter olmali')
     .max(50)
     .trim(),
-  email: z.string().email('Gecerli bir e-posta giriniz').toLowerCase().trim().optional().nullable(),
+  email: z.string().email('Gecerli bir e-posta giriniz').transform((val) => val.toLocaleLowerCase('tr-TR').trim()).optional().nullable(),
   phone: z
     .string({ required_error: 'Telefon numarasi gerekli' })
     .regex(/^(\+90|0)?[0-9]{10}$/, 'Gecerli bir telefon numarasi giriniz'),

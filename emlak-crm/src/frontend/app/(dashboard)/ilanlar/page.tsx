@@ -149,8 +149,8 @@ export default function IlanlarPage() {
 
   const filteredProperties = properties.filter((p) => {
     const matchesSearch =
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.location.toLowerCase().includes(searchQuery.toLowerCase());
+      p.title.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR')) ||
+      p.location.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR'));
     const matchesType = typeFilter === "all" || p.type === typeFilter;
     const matchesListingType =
       listingTypeFilter === "all" || p.listing_type === listingTypeFilter;

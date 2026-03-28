@@ -86,7 +86,7 @@ export function Header() {
                     ?.split(" ")
                     .map((n) => n[0])
                     .join("")
-                    .toUpperCase() || "U"}
+                    .toLocaleUpperCase('tr-TR') || "U"}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden text-sm font-medium md:inline-block">

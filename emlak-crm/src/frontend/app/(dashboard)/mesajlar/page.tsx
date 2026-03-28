@@ -238,8 +238,8 @@ export default function MesajlarPage() {
     const matchesChannel =
       activeChannel === "tumu" || conv.channel === activeChannel;
     const matchesSearch =
-      conv.contact_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.last_message.toLowerCase().includes(searchQuery.toLowerCase());
+      conv.contact_name.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR')) ||
+      conv.last_message.toLocaleLowerCase('tr-TR').includes(searchQuery.toLocaleLowerCase('tr-TR'));
     return matchesChannel && matchesSearch;
   });
 

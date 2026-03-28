@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Emlak CRM - Türkiye Emlak Yönetim Sistemi",
+  title: "Emlak CRM - Türkiye'nin En Gelişmiş Emlak Yönetim Sistemi",
   description:
-    "Türkiye emlak sektörü için geliştirilmiş profesyonel müşteri ilişkileri yönetim sistemi. İlan yönetimi, müşteri takibi, satış pipeline ve portal entegrasyonları.",
+    "Türkiye emlak sektörü için geliştirilmiş profesyonel CRM sistemi. İlan yönetimi, müşteri takibi, satış pipeline, komisyon hesaplama, sahibinden/hepsiemlak/emlakjet portal entegrasyonları ile emlak ofislerinin tüm ihtiyaçları tek platformda.",
   keywords: [
     "emlak",
     "crm",
@@ -19,7 +19,50 @@ export const metadata: Metadata = {
     "türkiye",
     "ilan yönetimi",
     "müşteri takibi",
+    "emlak yazılımı",
+    "emlak ofisi",
+    "sahibinden",
+    "hepsiemlak",
+    "komisyon takibi",
   ],
+  authors: [{ name: "Emlak CRM" }],
+  robots: "index, follow",
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    url: "https://emlakcrm.com.tr",
+    siteName: "Emlak CRM",
+    title: "Emlak CRM - Türkiye'nin En Gelişmiş Emlak Yönetim Sistemi",
+    description:
+      "Emlak ofisleri için profesyonel CRM: ilan yönetimi, müşteri takibi, satış pipeline, portal entegrasyonları.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Emlak CRM - Emlak Yönetim Sistemi",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Emlak CRM - Türkiye'nin En Gelişmiş Emlak Yönetim Sistemi",
+    description:
+      "Emlak ofisleri için profesyonel CRM: ilan yönetimi, müşteri takibi, satış pipeline, portal entegrasyonları.",
+    images: ["/og-image.png"],
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+  },
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+  other: {
+    "content-language": "tr",
+  },
 };
 
 export default function RootLayout({
