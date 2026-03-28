@@ -1,3 +1,6 @@
+// Türkiye saat dilimi
+process.env.TZ = 'Europe/Istanbul';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';

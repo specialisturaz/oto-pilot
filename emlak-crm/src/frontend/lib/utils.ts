@@ -2,6 +2,9 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { format, formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
+import { toZonedTime } from "date-fns-tz";
+
+const TZ = "Europe/Istanbul";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -57,7 +60,18 @@ export function formatPhone(phone: string): string {
  */
 export function formatDate(date: string | Date, pattern?: string): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return format(d, pattern || "d MMMM yyyy", { locale: tr });
+  const zonedDate = toZonedTime(d, TZ);
+  return format(zonedDate, pattern || "d MMMM yyyy", { locale: tr });
+}
+
+/**
+ * Formats a date with time in Turkish (Europe/Istanbul).
+ * Example: "15 Mart 2026 14:30"
+ */
+export function formatDateTime(date: string | Date): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const zonedDate = toZonedTime(d, TZ);
+  return format(zonedDate, "d MMMM yyyy HH:mm", { locale: tr });
 }
 
 /**
@@ -66,7 +80,8 @@ export function formatDate(date: string | Date, pattern?: string): string {
  */
 export function formatRelativeDate(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return formatDistanceToNow(d, { addSuffix: true, locale: tr });
+  const zonedDate = toZonedTime(d, TZ);
+  return formatDistanceToNow(zonedDate, { addSuffix: true, locale: tr });
 }
 
 /**
