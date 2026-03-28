@@ -1,0 +1,123 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npx tsx:*)",
+      "Bash(git:*)",
+      "Bash(docker compose:*)",
+      "Bash(node:*)",
+      "Bash(curl http://localhost:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /)",
+      "Bash(git push --force)",
+      "Bash(DROP DATABASE)",
+      "Bash(DROP TABLE)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo === Emlak CRM Session ===",
+            "async": false
+          }
+        ]
+      }
+    ]
+  },
+  "agents": {
+    "code-reviewer": {
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ]
+    },
+    "security-auditor": {
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ]
+    },
+    "database-reviewer": {
+      "model": "opus",
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ]
+    },
+    "frontend-developer": {
+      "model": "sonnet",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ]
+    },
+    "backend-developer": {
+      "model": "sonnet",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ]
+    },
+    "test-runner": {
+      "model": "sonnet",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ]
+    },
+    "performance-analyzer": {
+      "model": "sonnet",
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob",
+        "Bash"
+      ]
+    },
+    "prisma-specialist": {
+      "model": "sonnet",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob",
+        "Grep"
+      ]
+    }
+  },
+  "skills": {
+    "autoLoad": [
+      "verification-before-completion",
+      "systematic-debugging"
+    ]
+  }
+}
