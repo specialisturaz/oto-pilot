@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
 import {
   AppError,
   NotFoundError,
@@ -222,9 +223,8 @@ describe('globalErrorHandler', () => {
   });
 
   it('should handle ZodError as 400 validation error', () => {
-    // Import ZodError from the same module the error handler uses
-    const { ZodError } = require('zod');
-    const zodError = ZodError.create([
+    // Use the same ZodError imported via ESM at the top of this file
+    const zodError = new ZodError([
       {
         code: 'too_small',
         minimum: 2,

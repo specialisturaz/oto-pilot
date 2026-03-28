@@ -24,13 +24,35 @@ const { mockPrismaContact, mockPrismaActivity, mockPrismaDeal } = vi.hoisted(() 
   },
 }));
 
-vi.mock('@prisma/client', () => ({
-  PrismaClient: vi.fn().mockImplementation(() => ({
-    contact: mockPrismaContact,
-    activity: mockPrismaActivity,
-    deal: mockPrismaDeal,
-  })),
-}));
+vi.mock('@prisma/client', () => {
+  class PrismaClientKnownRequestError extends Error {
+    code: string;
+    meta?: Record<string, unknown>;
+    constructor(message: string, opts: { code: string; meta?: Record<string, unknown>; clientVersion: string }) {
+      super(message);
+      this.name = 'PrismaClientKnownRequestError';
+      this.code = opts.code;
+      this.meta = opts.meta;
+    }
+  }
+  class PrismaClientValidationError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'PrismaClientValidationError';
+    }
+  }
+  return {
+    PrismaClient: vi.fn().mockImplementation(() => ({
+      contact: mockPrismaContact,
+      activity: mockPrismaActivity,
+      deal: mockPrismaDeal,
+    })),
+    Prisma: {
+      PrismaClientKnownRequestError,
+      PrismaClientValidationError,
+    },
+  };
+});
 
 vi.mock('../../../src/backend/utils/logger', () => ({
   default: {
@@ -86,7 +108,7 @@ let authToken: string;
 
 // Sample contact data (Turkish values)
 const SAMPLE_CONTACT = {
-  id: 'contact-uuid-1',
+  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   firstName: 'Hasan',
   lastName: 'Ozdemir',
   email: 'hasan.ozdemir@gmail.com',
@@ -304,12 +326,12 @@ describe('GET /api/v1/contacts/:id', () => {
     mockPrismaContact.findUnique.mockResolvedValue({ ...SAMPLE_CONTACT });
 
     const response = await request(app)
-      .get('/api/v1/contacts/contact-uuid-1')
+      .get('/api/v1/contacts/a1b2c3d4-e5f6-7890-abcd-ef1234567890')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
 
     expect(response.body.success).toBe(true);
-    expect(response.body.data.id).toBe('contact-uuid-1');
+    expect(response.body.data.id).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
     expect(response.body.data.firstName).toBe('Hasan');
     expect(response.body.data.city).toBe('Istanbul');
   });
@@ -333,7 +355,7 @@ describe('GET /api/v1/contacts/:id', () => {
     });
 
     const response = await request(app)
-      .get('/api/v1/contacts/contact-uuid-1')
+      .get('/api/v1/contacts/a1b2c3d4-e5f6-7890-abcd-ef1234567890')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(403);
 
@@ -363,7 +385,7 @@ describe('PUT /api/v1/contacts/:id', () => {
     });
 
     const response = await request(app)
-      .put('/api/v1/contacts/contact-uuid-1')
+      .put('/api/v1/contacts/a1b2c3d4-e5f6-7890-abcd-ef1234567890')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
         notes: 'Guncellenmis notlar - Besiktas bolgesine de bakiyor',
@@ -394,7 +416,7 @@ describe('PUT /api/v1/contacts/:id', () => {
     });
 
     const response = await request(app)
-      .put('/api/v1/contacts/contact-uuid-1')
+      .put('/api/v1/contacts/a1b2c3d4-e5f6-7890-abcd-ef1234567890')
       .set('Authorization', `Bearer ${authToken}`)
       .send({ notes: 'Yetkisiz guncelleme' })
       .expect(403);
@@ -412,7 +434,7 @@ describe('DELETE /api/v1/contacts/:id', () => {
     mockPrismaContact.delete.mockResolvedValue({ ...SAMPLE_CONTACT });
 
     const response = await request(app)
-      .delete('/api/v1/contacts/contact-uuid-1')
+      .delete('/api/v1/contacts/a1b2c3d4-e5f6-7890-abcd-ef1234567890')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
 
@@ -438,7 +460,7 @@ describe('DELETE /api/v1/contacts/:id', () => {
     });
 
     const response = await request(app)
-      .delete('/api/v1/contacts/contact-uuid-1')
+      .delete('/api/v1/contacts/a1b2c3d4-e5f6-7890-abcd-ef1234567890')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(403);
 
@@ -447,7 +469,7 @@ describe('DELETE /api/v1/contacts/:id', () => {
 
   it('should return 401 without auth', async () => {
     await request(app)
-      .delete('/api/v1/contacts/contact-uuid-1')
+      .delete('/api/v1/contacts/a1b2c3d4-e5f6-7890-abcd-ef1234567890')
       .expect(401);
   });
 });

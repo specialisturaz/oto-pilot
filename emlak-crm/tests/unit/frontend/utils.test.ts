@@ -136,11 +136,11 @@ describe('formatDate', () => {
   });
 
   it('should handle Turkish month names correctly', () => {
-    // Test various months
+    // Test various months (Turkish locale uses special characters)
     expect(formatDate('2024-01-15')).toContain('Ocak');
     expect(formatDate('2024-06-15')).toContain('Haziran');
-    expect(formatDate('2024-09-15')).toContain('Eylul'); // Eylul in Turkish
-    expect(formatDate('2024-12-15')).toContain('Aralik'); // Aralik in Turkish
+    expect(formatDate('2024-09-15')).toContain('Eyl\u00FCl'); // Eylul with u-umlaut
+    expect(formatDate('2024-12-15')).toContain('Aral\u0131k'); // Aralik with dotless-i
   });
 
   it('should format ISO date string', () => {

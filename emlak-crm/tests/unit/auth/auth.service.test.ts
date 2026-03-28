@@ -18,10 +18,30 @@ const { mockPrismaUser } = vi.hoisted(() => {
 });
 
 vi.mock('@prisma/client', () => {
+  class PrismaClientKnownRequestError extends Error {
+    code: string;
+    meta?: Record<string, unknown>;
+    constructor(message: string, opts: { code: string; meta?: Record<string, unknown>; clientVersion: string }) {
+      super(message);
+      this.name = 'PrismaClientKnownRequestError';
+      this.code = opts.code;
+      this.meta = opts.meta;
+    }
+  }
+  class PrismaClientValidationError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'PrismaClientValidationError';
+    }
+  }
   return {
     PrismaClient: vi.fn().mockImplementation(() => ({
       user: mockPrismaUser,
     })),
+    Prisma: {
+      PrismaClientKnownRequestError,
+      PrismaClientValidationError,
+    },
   };
 });
 
