@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   Bell,
@@ -19,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import api from "@/lib/api";
 
 export function Header() {
   const router = useRouter();
@@ -26,10 +28,32 @@ export function Header() {
   const { theme, toggleTheme, toggleSidebar } = useUIStore();
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Fetch unread notification count
+  const { data: notifData } = useQuery({
+    queryKey: ["unread-notification-count"],
+    queryFn: async () => {
+      const res = await api.get("/api/v1/notifications/unread-count");
+      return res.data?.data || res.data;
+    },
+    retry: 1,
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const unreadCount = notifData?.count ?? notifData?.unreadCount ?? (typeof notifData === "number" ? notifData : 0);
+
   const handleLogout = () => {
     logout();
     router.push("/login");
   };
+
+  const handleSearch = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" && searchQuery.trim()) {
+        router.push(`/musteriler?search=${encodeURIComponent(searchQuery.trim())}`);
+      }
+    },
+    [searchQuery, router]
+  );
 
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
@@ -51,6 +75,7 @@ export function Header() {
           className="pl-9"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleSearch}
         />
       </div>
 
@@ -65,11 +90,18 @@ export function Header() {
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={() => router.push("/ayarlar")}
+        >
           <Bell className="h-5 w-5" />
-          <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center p-0 text-[10px]">
-            3
-          </Badge>
+          {unreadCount > 0 && (
+            <Badge className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center p-0 text-[10px]">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Badge>
+          )}
         </Button>
 
         {/* User Dropdown */}
@@ -101,7 +133,7 @@ export function Header() {
             >
               <DropdownMenu.Item
                 className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent"
-                onSelect={() => router.push("/profil")}
+                onSelect={() => router.push("/ayarlar")}
               >
                 <User className="h-4 w-4" />
                 Profil

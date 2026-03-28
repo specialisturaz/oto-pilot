@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,8 +10,11 @@ import {
   MapPin,
   User,
   Phone,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -19,21 +23,21 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
 const TURKISH_MONTHS = [
-  "Ocak",
-  "Subat",
-  "Mart",
-  "Nisan",
-  "Mayis",
-  "Haziran",
-  "Temmuz",
-  "Agustos",
-  "Eylul",
-  "Ekim",
-  "Kasim",
-  "Aralik",
+  "Ocak", "Subat", "Mart", "Nisan", "Mayis", "Haziran",
+  "Temmuz", "Agustos", "Eylul", "Ekim", "Kasim", "Aralik",
 ];
 
 const TURKISH_DAYS = ["Pzt", "Sal", "Car", "Per", "Cum", "Cmt", "Paz"];
@@ -47,117 +51,46 @@ interface Appointment {
   date: string;
   time: string;
   contact: string;
+  contactName?: string;
   location: string;
   phone: string;
+  description?: string;
 }
 
 const appointmentTypeMap: Record<
   AppointmentType,
   { label: string; color: string; dotColor: string; variant: "info" | "success" | "destructive" }
 > = {
-  gosterim: {
-    label: "Gosterim",
-    color: "bg-blue-500",
-    dotColor: "bg-blue-500",
-    variant: "info",
-  },
-  toplanti: {
-    label: "Toplanti",
-    color: "bg-emerald-500",
-    dotColor: "bg-emerald-500",
-    variant: "success",
-  },
-  tapu_randevusu: {
-    label: "Tapu Randevusu",
-    color: "bg-red-500",
-    dotColor: "bg-red-500",
-    variant: "destructive",
-  },
+  gosterim: { label: "Gosterim", color: "bg-blue-500", dotColor: "bg-blue-500", variant: "info" },
+  toplanti: { label: "Toplanti", color: "bg-emerald-500", dotColor: "bg-emerald-500", variant: "success" },
+  tapu_randevusu: { label: "Tapu Randevusu", color: "bg-red-500", dotColor: "bg-red-500", variant: "destructive" },
 };
 
-// Mock data
-const mockAppointments: Appointment[] = [
-  {
-    id: "1",
-    title: "Kadikoy 3+1 Daire Gosterimi",
-    type: "gosterim",
-    date: "2026-03-28",
-    time: "10:00",
-    contact: "Ahmet Yilmaz",
-    location: "Kadikoy, Istanbul",
-    phone: "5321234567",
-  },
-  {
-    id: "2",
-    title: "Ofis Toplantisi",
-    type: "toplanti",
-    date: "2026-03-28",
-    time: "14:00",
-    contact: "Mehmet Danisman",
-    location: "Merkez Ofis",
-    phone: "5339876543",
-  },
-  {
-    id: "3",
-    title: "Besiktas Villa Tapu Devri",
-    type: "tapu_randevusu",
-    date: "2026-03-30",
-    time: "09:30",
-    contact: "Zeynep Arslan",
-    location: "Besiktas Tapu Mudurlugu",
-    phone: "5054443322",
-  },
-  {
-    id: "4",
-    title: "Atasehir Residence Gosterimi",
-    type: "gosterim",
-    date: "2026-03-31",
-    time: "11:00",
-    contact: "Fatma Demir",
-    location: "Atasehir, Istanbul",
-    phone: "5411112233",
-  },
-  {
-    id: "5",
-    title: "Haftalik Satis Toplantisi",
-    type: "toplanti",
-    date: "2026-04-01",
-    time: "09:00",
-    contact: "Tum Ekip",
-    location: "Merkez Ofis",
-    phone: "-",
-  },
-  {
-    id: "6",
-    title: "Bakirkoy Dublex Gosterimi",
-    type: "gosterim",
-    date: "2026-04-03",
-    time: "15:00",
-    contact: "Mustafa Kaya",
-    location: "Bakirkoy, Istanbul",
-    phone: "5367778899",
-  },
-  {
-    id: "7",
-    title: "Maltepe Daire Tapu Islemleri",
-    type: "tapu_randevusu",
-    date: "2026-04-07",
-    time: "10:00",
-    contact: "Hasan Yildiz",
-    location: "Maltepe Tapu Mudurlugu",
-    phone: "5429998877",
-  },
-  {
-    id: "8",
-    title: "Sisli Ofis Gosterimi",
-    type: "gosterim",
-    date: "2026-03-29",
-    time: "13:00",
-    contact: "Ali Celik",
-    location: "Sisli, Istanbul",
-    phone: "5367778899",
-  },
+// Fallback data
+const fallbackAppointments: Appointment[] = [
+  { id: "1", title: "Kadikoy 3+1 Daire Gosterimi", type: "gosterim", date: "2026-03-28", time: "10:00", contact: "Ahmet Yilmaz", location: "Kadikoy, Istanbul", phone: "5321234567" },
+  { id: "2", title: "Ofis Toplantisi", type: "toplanti", date: "2026-03-28", time: "14:00", contact: "Mehmet Danisman", location: "Merkez Ofis", phone: "5339876543" },
+  { id: "3", title: "Besiktas Villa Tapu Devri", type: "tapu_randevusu", date: "2026-03-30", time: "09:30", contact: "Zeynep Arslan", location: "Besiktas Tapu Mudurlugu", phone: "5054443322" },
+  { id: "4", title: "Atasehir Residence Gosterimi", type: "gosterim", date: "2026-03-31", time: "11:00", contact: "Fatma Demir", location: "Atasehir, Istanbul", phone: "5411112233" },
+  { id: "5", title: "Haftalik Satis Toplantisi", type: "toplanti", date: "2026-04-01", time: "09:00", contact: "Tum Ekip", location: "Merkez Ofis", phone: "-" },
+  { id: "6", title: "Bakirkoy Dublex Gosterimi", type: "gosterim", date: "2026-04-03", time: "15:00", contact: "Mustafa Kaya", location: "Bakirkoy, Istanbul", phone: "5367778899" },
+  { id: "7", title: "Maltepe Daire Tapu Islemleri", type: "tapu_randevusu", date: "2026-04-07", time: "10:00", contact: "Hasan Yildiz", location: "Maltepe Tapu Mudurlugu", phone: "5429998877" },
+  { id: "8", title: "Sisli Ofis Gosterimi", type: "gosterim", date: "2026-03-29", time: "13:00", contact: "Ali Celik", location: "Sisli, Istanbul", phone: "5367778899" },
 ];
+
+function normalizeAppointment(a: Appointment & Record<string, unknown>): Appointment {
+  return {
+    id: a.id || String(Math.random()),
+    title: a.title || (a.subject as string) || "Randevu",
+    type: a.type || (a.appointmentType as AppointmentType) || "gosterim",
+    date: a.date || (a.startDate ? String(a.startDate).split("T")[0] : "") || (a.start ? String(a.start).split("T")[0] : ""),
+    time: a.time || (a.startDate ? new Date(String(a.startDate)).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "") || (a.start ? new Date(String(a.start)).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : ""),
+    contact: a.contact || a.contactName || (a.contact_name as string) || "-",
+    location: a.location || (a.address as string) || "-",
+    phone: a.phone || "-",
+    description: a.description,
+  };
+}
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
@@ -165,7 +98,6 @@ function getDaysInMonth(year: number, month: number): number {
 
 function getFirstDayOfMonth(year: number, month: number): number {
   const day = new Date(year, month, 1).getDay();
-  // Convert from Sunday=0 to Monday=0
   return day === 0 ? 6 : day - 1;
 }
 
@@ -174,19 +106,88 @@ function formatDateKey(year: number, month: number, day: number): string {
 }
 
 export default function TakvimPage() {
+  const queryClient = useQueryClient();
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(
     formatDateKey(today.getFullYear(), today.getMonth(), today.getDate())
   );
+  const [error, setError] = useState<string | null>(null);
+  const [newAptDialogOpen, setNewAptDialogOpen] = useState(false);
+  const [aptForm, setAptForm] = useState({
+    title: "",
+    type: "gosterim" as AppointmentType,
+    date: formatDateKey(today.getFullYear(), today.getMonth(), today.getDate()),
+    time: "10:00",
+    contact: "",
+    location: "",
+    phone: "",
+  });
+
+  // Calculate date range for API query
+  const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-01`;
+  const lastDay = getDaysInMonth(currentYear, currentMonth);
+  const monthEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  // Fetch appointments from API
+  const { data: aptData, isLoading, isError } = useQuery({
+    queryKey: ["calendar", monthStart, monthEnd],
+    queryFn: async () => {
+      const res = await api.get(`/api/v1/calendar?start=${monthStart}&end=${monthEnd}`);
+      return res.data?.data || res.data;
+    },
+    retry: 1,
+  });
+
+  const appointments: Appointment[] = (
+    isError
+      ? fallbackAppointments
+      : Array.isArray(aptData) ? aptData : aptData?.items || aptData?.appointments || fallbackAppointments
+  ).map((a: Appointment & Record<string, unknown>) => normalizeAppointment(a));
+
+  // Create appointment mutation
+  const createAptMutation = useMutation({
+    mutationFn: async (data: typeof aptForm) => {
+      const res = await api.post("/api/v1/calendar", {
+        title: data.title,
+        type: data.type,
+        date: data.date,
+        startDate: `${data.date}T${data.time}:00`,
+        time: data.time,
+        contact: data.contact,
+        contactName: data.contact,
+        location: data.location,
+        phone: data.phone,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar"] });
+      setNewAptDialogOpen(false);
+      setAptForm({
+        title: "",
+        type: "gosterim",
+        date: selectedDate || formatDateKey(today.getFullYear(), today.getMonth(), today.getDate()),
+        time: "10:00",
+        contact: "",
+        location: "",
+        phone: "",
+      });
+    },
+    onError: () => {
+      setError("Randevu olusturulamadi.");
+      setTimeout(() => setError(null), 4000);
+    },
+  });
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
 
   // Group appointments by date
   const appointmentsByDate: Record<string, Appointment[]> = {};
-  mockAppointments.forEach((apt) => {
+  appointments.forEach((apt) => {
+    if (!apt.date) return;
     if (!appointmentsByDate[apt.date]) {
       appointmentsByDate[apt.date] = [];
     }
@@ -197,12 +198,11 @@ export default function TakvimPage() {
     ? appointmentsByDate[selectedDate] || []
     : [];
 
-  // Upcoming appointments (sorted by date and time)
-  const upcomingAppointments = mockAppointments
+  const upcomingAppointments = appointments
     .filter((apt) => apt.date >= formatDateKey(today.getFullYear(), today.getMonth(), today.getDate()))
     .sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return a.time.localeCompare(b.time);
+      return (a.time || "").localeCompare(b.time || "");
     })
     .slice(0, 5);
 
@@ -232,13 +232,8 @@ export default function TakvimPage() {
     );
   };
 
-  const todayKey = formatDateKey(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
+  const todayKey = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
-  // Build calendar grid
   const calendarDays: (number | null)[] = [];
   for (let i = 0; i < firstDay; i++) {
     calendarDays.push(null);
@@ -249,6 +244,74 @@ export default function TakvimPage() {
 
   return (
     <div className="space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* New Appointment Dialog */}
+      <Dialog open={newAptDialogOpen} onOpenChange={setNewAptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Yeni Randevu</DialogTitle>
+            <DialogDescription>Randevu bilgilerini girin</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Baslik</label>
+              <Input value={aptForm.title} onChange={(e) => setAptForm({ ...aptForm, title: e.target.value })} placeholder="Randevu basligi" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tur</label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={aptForm.type}
+                onChange={(e) => setAptForm({ ...aptForm, type: e.target.value as AppointmentType })}
+              >
+                <option value="gosterim">Gosterim</option>
+                <option value="toplanti">Toplanti</option>
+                <option value="tapu_randevusu">Tapu Randevusu</option>
+              </select>
+            </div>
+            <div className="grid gap-4 grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tarih</label>
+                <Input type="date" value={aptForm.date} onChange={(e) => setAptForm({ ...aptForm, date: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Saat</label>
+                <Input type="time" value={aptForm.time} onChange={(e) => setAptForm({ ...aptForm, time: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Kisi</label>
+              <Input value={aptForm.contact} onChange={(e) => setAptForm({ ...aptForm, contact: e.target.value })} placeholder="Musteri adi" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Konum</label>
+              <Input value={aptForm.location} onChange={(e) => setAptForm({ ...aptForm, location: e.target.value })} placeholder="Adres" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Telefon</label>
+              <Input value={aptForm.phone} onChange={(e) => setAptForm({ ...aptForm, phone: e.target.value })} placeholder="Telefon numarasi" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewAptDialogOpen(false)}>Iptal</Button>
+            <Button
+              onClick={() => createAptMutation.mutate(aptForm)}
+              disabled={createAptMutation.isPending || !aptForm.title.trim()}
+            >
+              {createAptMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Olustur
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -257,7 +320,13 @@ export default function TakvimPage() {
             Randevularinizi ve gorevlerinizi yonetin
           </p>
         </div>
-        <Button>
+        <Button onClick={() => {
+          setAptForm({
+            ...aptForm,
+            date: selectedDate || formatDateKey(today.getFullYear(), today.getMonth(), today.getDate()),
+          });
+          setNewAptDialogOpen(true);
+        }}>
           <Plus className="mr-2 h-4 w-4" />
           Yeni Randevu
         </Button>
@@ -275,112 +344,99 @@ export default function TakvimPage() {
                 <Button variant="outline" size="sm" onClick={goToToday}>
                   Bugun
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={goToPreviousMonth}
-                >
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToPreviousMonth}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={goToNextMonth}
-                >
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={goToNextMonth}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {/* Day Headers */}
-            <div className="grid grid-cols-7 gap-px">
-              {TURKISH_DAYS.map((day) => (
-                <div
-                  key={day}
-                  className="py-2 text-center text-xs font-medium text-muted-foreground"
-                >
-                  {day}
+            {isLoading ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-7 gap-px">
+                  {Array.from({ length: 35 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 rounded-md" />
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            {/* Calendar Days */}
-            <div className="grid grid-cols-7 gap-px">
-              {calendarDays.map((day, index) => {
-                if (day === null) {
-                  return (
-                    <div key={`empty-${index}`} className="min-h-[80px] p-1" />
-                  );
-                }
-
-                const dateKey = formatDateKey(currentYear, currentMonth, day);
-                const dayAppointments = appointmentsByDate[dateKey] || [];
-                const isToday = dateKey === todayKey;
-                const isSelected = dateKey === selectedDate;
-
-                return (
-                  <div
-                    key={day}
-                    className={cn(
-                      "min-h-[80px] cursor-pointer rounded-md border p-1 transition-colors hover:bg-accent/50",
-                      isToday && "border-primary",
-                      isSelected && "bg-accent"
-                    )}
-                    onClick={() => setSelectedDate(dateKey)}
-                  >
-                    <div
-                      className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
-                        isToday && "bg-primary text-primary-foreground"
-                      )}
-                    >
+              </div>
+            ) : (
+              <>
+                {/* Day Headers */}
+                <div className="grid grid-cols-7 gap-px">
+                  {TURKISH_DAYS.map((day) => (
+                    <div key={day} className="py-2 text-center text-xs font-medium text-muted-foreground">
                       {day}
                     </div>
-                    <div className="mt-1 space-y-0.5">
-                      {dayAppointments.slice(0, 3).map((apt) => {
-                        const typeInfo = appointmentTypeMap[apt.type];
-                        return (
-                          <div
-                            key={apt.id}
-                            className="flex items-center gap-1"
-                          >
-                            <div
-                              className={cn(
-                                "h-1.5 w-1.5 shrink-0 rounded-full",
-                                typeInfo.dotColor
-                              )}
-                            />
-                            <span className="truncate text-[10px] text-muted-foreground">
-                              {apt.time} {apt.title.slice(0, 15)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {dayAppointments.length > 3 && (
-                        <span className="text-[10px] text-muted-foreground">
-                          +{dayAppointments.length - 3} daha
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Legend */}
-            <div className="mt-4 flex flex-wrap gap-4 border-t pt-4">
-              {Object.entries(appointmentTypeMap).map(([key, info]) => (
-                <div key={key} className="flex items-center gap-2 text-xs">
-                  <div
-                    className={cn("h-2.5 w-2.5 rounded-full", info.dotColor)}
-                  />
-                  <span>{info.label}</span>
+                  ))}
                 </div>
-              ))}
-            </div>
+
+                {/* Calendar Days */}
+                <div className="grid grid-cols-7 gap-px">
+                  {calendarDays.map((day, index) => {
+                    if (day === null) {
+                      return <div key={`empty-${index}`} className="min-h-[80px] p-1" />;
+                    }
+
+                    const dateKey = formatDateKey(currentYear, currentMonth, day);
+                    const dayAppointments = appointmentsByDate[dateKey] || [];
+                    const isToday = dateKey === todayKey;
+                    const isSelected = dateKey === selectedDate;
+
+                    return (
+                      <div
+                        key={day}
+                        className={cn(
+                          "min-h-[80px] cursor-pointer rounded-md border p-1 transition-colors hover:bg-accent/50",
+                          isToday && "border-primary",
+                          isSelected && "bg-accent"
+                        )}
+                        onClick={() => setSelectedDate(dateKey)}
+                      >
+                        <div
+                          className={cn(
+                            "flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
+                            isToday && "bg-primary text-primary-foreground"
+                          )}
+                        >
+                          {day}
+                        </div>
+                        <div className="mt-1 space-y-0.5">
+                          {dayAppointments.slice(0, 3).map((apt) => {
+                            const typeInfo = appointmentTypeMap[apt.type] || appointmentTypeMap.gosterim;
+                            return (
+                              <div key={apt.id} className="flex items-center gap-1">
+                                <div className={cn("h-1.5 w-1.5 shrink-0 rounded-full", typeInfo.dotColor)} />
+                                <span className="truncate text-[10px] text-muted-foreground">
+                                  {apt.time} {apt.title.slice(0, 15)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {dayAppointments.length > 3 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              +{dayAppointments.length - 3} daha
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div className="mt-4 flex flex-wrap gap-4 border-t pt-4">
+                  {Object.entries(appointmentTypeMap).map(([key, info]) => (
+                    <div key={key} className="flex items-center gap-2 text-xs">
+                      <div className={cn("h-2.5 w-2.5 rounded-full", info.dotColor)} />
+                      <span>{info.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -407,7 +463,7 @@ export default function TakvimPage() {
               {selectedAppointments.length > 0 ? (
                 <div className="space-y-3">
                   {selectedAppointments.map((apt) => {
-                    const typeInfo = appointmentTypeMap[apt.type];
+                    const typeInfo = appointmentTypeMap[apt.type] || appointmentTypeMap.gosterim;
                     return (
                       <div
                         key={apt.id}
@@ -438,10 +494,13 @@ export default function TakvimPage() {
                             {apt.location}
                           </div>
                           {apt.phone !== "-" && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <button
+                              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+                              onClick={() => window.open(`tel:+90${apt.phone}`, "_self")}
+                            >
                               <Phone className="h-3 w-3" />
                               {apt.phone}
-                            </div>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -463,51 +522,72 @@ export default function TakvimPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Yaklasan Randevular</CardTitle>
-              <CardDescription>
-                Onumuzdeki randevulariniz
-              </CardDescription>
+              <CardDescription>Onumuzdeki randevulariniz</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {upcomingAppointments.map((apt) => {
-                  const typeInfo = appointmentTypeMap[apt.type];
-                  const dateParts = apt.date.split("-");
-                  const displayDate = `${dateParts[2]} ${TURKISH_MONTHS[parseInt(dateParts[1]) - 1]}`;
-                  return (
-                    <div
-                      key={apt.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-lg",
-                            apt.type === "gosterim" && "bg-blue-100 text-blue-600",
-                            apt.type === "toplanti" && "bg-emerald-100 text-emerald-600",
-                            apt.type === "tapu_randevusu" && "bg-red-100 text-red-600"
-                          )}
-                        >
-                          <Clock className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium line-clamp-1">
-                            {apt.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {apt.contact}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-xs font-medium">{displayDate}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {apt.time}
-                        </p>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+                      <Skeleton className="h-10 w-10 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingAppointments.map((apt) => {
+                    const dateParts = apt.date.split("-");
+                    const displayDate = dateParts.length >= 3
+                      ? `${dateParts[2]} ${TURKISH_MONTHS[parseInt(dateParts[1]) - 1]}`
+                      : apt.date;
+                    return (
+                      <div
+                        key={apt.id}
+                        className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => {
+                          setSelectedDate(apt.date);
+                          // Navigate to the month of the appointment
+                          if (dateParts.length >= 2) {
+                            setCurrentYear(parseInt(dateParts[0]));
+                            setCurrentMonth(parseInt(dateParts[1]) - 1);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex h-10 w-10 items-center justify-center rounded-lg",
+                              apt.type === "gosterim" && "bg-blue-100 text-blue-600",
+                              apt.type === "toplanti" && "bg-emerald-100 text-emerald-600",
+                              apt.type === "tapu_randevusu" && "bg-red-100 text-red-600"
+                            )}
+                          >
+                            <Clock className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium line-clamp-1">{apt.title}</p>
+                            <p className="text-xs text-muted-foreground">{apt.contact}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs font-medium">{displayDate}</p>
+                          <p className="text-xs text-muted-foreground">{apt.time}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {upcomingAppointments.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <Clock className="h-6 w-6 text-muted-foreground/30" />
+                      <p className="mt-2 text-xs text-muted-foreground">Yaklasan randevu yok</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

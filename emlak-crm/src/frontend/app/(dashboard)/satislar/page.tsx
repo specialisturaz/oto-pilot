@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   MoreHorizontal,
@@ -11,12 +12,23 @@ import {
   Calendar,
   ArrowRight,
   HandshakeIcon,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn, formatPrice, formatPriceShort } from "@/lib/utils";
 import api from "@/lib/api";
@@ -32,6 +44,41 @@ const stages = [
   { id: "tapu", label: "Tapu", color: "bg-emerald-500" },
   { id: "tamamlandi", label: "Tamamlandi", color: "bg-green-600" },
 ];
+
+const stageOrder = stages.map((s) => s.id);
+
+// Map backend stage names to our stage ids
+const stageNormalizeMap: Record<string, string> = {
+  inquiry: "talep",
+  showing: "gosterim",
+  negotiation: "pazarlik",
+  offer: "teklif",
+  deposit: "kapora",
+  contract: "sozlesme",
+  tapu_transfer: "tapu",
+  completed: "tamamlandi",
+  lost: "lost",
+  talep: "talep",
+  gosterim: "gosterim",
+  pazarlik: "pazarlik",
+  teklif: "teklif",
+  kapora: "kapora",
+  sozlesme: "sozlesme",
+  tapu: "tapu",
+  tamamlandi: "tamamlandi",
+};
+
+// Map stage id back to backend enum
+const stageToBackend: Record<string, string> = {
+  talep: "INQUIRY",
+  gosterim: "SHOWING",
+  pazarlik: "NEGOTIATION",
+  teklif: "OFFER",
+  kapora: "DEPOSIT",
+  sozlesme: "CONTRACT",
+  tapu: "TAPU_TRANSFER",
+  tamamlandi: "COMPLETED",
+};
 
 interface Deal {
   id: string;
@@ -56,13 +103,18 @@ const priorityColors: Record<string, string> = {
   low: "border-l-green-500",
 };
 
+function normalizeStage(stage: string): string {
+  const lower = stage.toLocaleLowerCase("tr-TR");
+  return stageNormalizeMap[lower] || lower;
+}
+
 function groupDealsByStage(dealsList: Deal[]): Record<string, Deal[]> {
   const grouped: Record<string, Deal[]> = {};
   stages.forEach((s) => {
     grouped[s.id] = [];
   });
   dealsList.forEach((deal) => {
-    const stage = (deal.stage || "talep").toLocaleLowerCase("tr-TR");
+    const stage = normalizeStage(deal.stage || "talep");
     if (grouped[stage]) {
       grouped[stage].push(deal);
     } else {
@@ -72,7 +124,32 @@ function groupDealsByStage(dealsList: Deal[]): Record<string, Deal[]> {
   return grouped;
 }
 
+function getNextStage(currentStage: string): string | null {
+  const normalized = normalizeStage(currentStage);
+  const idx = stageOrder.indexOf(normalized);
+  if (idx >= 0 && idx < stageOrder.length - 1) {
+    return stageOrder[idx + 1];
+  }
+  return null;
+}
+
 export default function SatislarPage() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [dealToCancel, setDealToCancel] = useState<Deal | null>(null);
+  const [newDealDialogOpen, setNewDealDialogOpen] = useState(false);
+  const [newDealStage, setNewDealStage] = useState("talep");
+  const [newDealForm, setNewDealForm] = useState({
+    contactName: "",
+    propertyTitle: "",
+    price: "",
+    stage: "talep",
+  });
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["deals"],
     queryFn: async () => {
@@ -85,12 +162,86 @@ export default function SatislarPage() {
   const dealsList: Deal[] = data?.items || data?.deals || (Array.isArray(data) ? data : []);
   const deals = groupDealsByStage(dealsList);
 
-  // Calculate totals
   const totalDeals = Object.values(deals).flat().length;
   const totalValue = Object.values(deals)
     .flat()
     .filter((d) => !d.is_rental && !d.isRental)
     .reduce((sum, d) => sum + (d.price || 0), 0);
+
+  // Move to next stage mutation
+  const moveToStageMutation = useMutation({
+    mutationFn: async ({ dealId, stage }: { dealId: string; stage: string }) => {
+      const backendStage = stageToBackend[stage] || stage.toLocaleUpperCase("tr-TR");
+      await api.patch(`/api/v1/deals/${dealId}/stage`, { stage: backendStage });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+    },
+    onError: () => {
+      setError("Asama guncellenemedi.");
+      setTimeout(() => setError(null), 4000);
+    },
+  });
+
+  // Cancel deal mutation
+  const cancelDealMutation = useMutation({
+    mutationFn: async (dealId: string) => {
+      await api.patch(`/api/v1/deals/${dealId}/stage`, { stage: "LOST" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      setCancelDialogOpen(false);
+      setDealToCancel(null);
+    },
+    onError: () => {
+      setError("Satis iptal edilemedi.");
+      setTimeout(() => setError(null), 4000);
+    },
+  });
+
+  // Create deal mutation
+  const createDealMutation = useMutation({
+    mutationFn: async (form: typeof newDealForm) => {
+      const backendStage = stageToBackend[form.stage] || "INQUIRY";
+      await api.post("/api/v1/deals", {
+        contactName: form.contactName,
+        propertyTitle: form.propertyTitle,
+        price: Number(form.price) || 0,
+        stage: backendStage,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deals"] });
+      setNewDealDialogOpen(false);
+      setNewDealForm({ contactName: "", propertyTitle: "", price: "", stage: "talep" });
+    },
+    onError: () => {
+      setError("Yeni satis olusturulamadi.");
+      setTimeout(() => setError(null), 4000);
+    },
+  });
+
+  const handleMoveToNextStage = useCallback((deal: Deal) => {
+    const nextStage = getNextStage(deal.stage || "talep");
+    if (nextStage) {
+      moveToStageMutation.mutate({ dealId: deal.id, stage: nextStage });
+    }
+  }, [moveToStageMutation]);
+
+  const handleViewDetail = useCallback((deal: Deal) => {
+    setSelectedDeal(deal);
+    setDetailDialogOpen(true);
+  }, []);
+
+  const handleNewDeal = useCallback((stage?: string) => {
+    setNewDealForm({
+      contactName: "",
+      propertyTitle: "",
+      price: "",
+      stage: stage || "talep",
+    });
+    setNewDealDialogOpen(true);
+  }, []);
 
   if (isLoading) {
     return (
@@ -112,6 +263,144 @@ export default function SatislarPage() {
 
   return (
     <div className="space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Satisi Iptal Et</DialogTitle>
+            <DialogDescription>
+              &quot;{dealToCancel?.property_title || dealToCancel?.propertyTitle || "Bu satis"}&quot; islemini iptal etmek istediginizden emin misiniz?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>Vazgec</Button>
+            <Button
+              variant="destructive"
+              onClick={() => { if (dealToCancel) cancelDealMutation.mutate(dealToCancel.id); }}
+              disabled={cancelDealMutation.isPending}
+            >
+              {cancelDealMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Iptal Et
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deal Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Satis Detayi</DialogTitle>
+            <DialogDescription>
+              {selectedDeal?.property_title || selectedDeal?.propertyTitle || "Satis"}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedDeal && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Musteri</p>
+                  <p className="font-medium">{selectedDeal.contact_name || selectedDeal.contactName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Gayrimenkul</p>
+                  <p className="font-medium">{selectedDeal.property_title || selectedDeal.propertyTitle || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Fiyat</p>
+                  <p className="font-medium text-primary">{formatPrice(selectedDeal.price || 0)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Danisman</p>
+                  <p className="font-medium">{selectedDeal.agent || selectedDeal.agentName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Asama</p>
+                  <Badge variant="secondary">{selectedDeal.stage || "-"}</Badge>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Olusturma Tarihi</p>
+                  <p className="font-medium">
+                    {(selectedDeal.created_at || selectedDeal.createdAt || "")
+                      .split("T")[0]?.split("-").reverse().join("/") || "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>Kapat</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Deal Dialog */}
+      <Dialog open={newDealDialogOpen} onOpenChange={setNewDealDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Yeni Satis</DialogTitle>
+            <DialogDescription>Yeni bir satis sureci baslatin</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Musteri Adi</label>
+              <Input
+                value={newDealForm.contactName}
+                onChange={(e) => setNewDealForm({ ...newDealForm, contactName: e.target.value })}
+                placeholder="Musteri adi"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Gayrimenkul</label>
+              <Input
+                value={newDealForm.propertyTitle}
+                onChange={(e) => setNewDealForm({ ...newDealForm, propertyTitle: e.target.value })}
+                placeholder="Gayrimenkul basligi"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Fiyat (TL)</label>
+              <Input
+                type="number"
+                value={newDealForm.price}
+                onChange={(e) => setNewDealForm({ ...newDealForm, price: e.target.value })}
+                placeholder="Fiyat"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Asama</label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={newDealForm.stage}
+                onChange={(e) => setNewDealForm({ ...newDealForm, stage: e.target.value })}
+              >
+                {stages.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewDealDialogOpen(false)}>Iptal</Button>
+            <Button
+              onClick={() => createDealMutation.mutate(newDealForm)}
+              disabled={createDealMutation.isPending || !newDealForm.propertyTitle.trim()}
+            >
+              {createDealMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Olustur
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -123,7 +412,7 @@ export default function SatislarPage() {
             {formatPrice(totalValue)}
           </p>
         </div>
-        <Button>
+        <Button onClick={() => handleNewDeal()}>
           <Plus className="mr-2 h-4 w-4" />
           Yeni Satis
         </Button>
@@ -177,18 +466,19 @@ export default function SatislarPage() {
               {/* Column Header */}
               <div className="flex items-center justify-between border-b p-3">
                 <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "h-3 w-3 rounded-full",
-                      stage.color
-                    )}
-                  />
+                  <div className={cn("h-3 w-3 rounded-full", stage.color)} />
                   <h3 className="font-semibold text-sm">{stage.label}</h3>
                   <Badge variant="outline" className="ml-1 text-xs">
                     {stageDeals.length}
                   </Badge>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  title={`${stage.label} asamasina yeni satis ekle`}
+                  onClick={() => handleNewDeal(stage.id)}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -211,6 +501,8 @@ export default function SatislarPage() {
                   const createdAt = deal.created_at || deal.createdAt || "";
                   const isRental = deal.is_rental || deal.isRental;
                   const priority = deal.priority || "medium";
+                  const nextStage = getNextStage(deal.stage || stage.id);
+
                   return (
                     <Card
                       key={deal.id}
@@ -241,18 +533,35 @@ export default function SatislarPage() {
                                   className="z-50 min-w-[140px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
                                   align="end"
                                 >
-                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
+                                  <DropdownMenu.Item
+                                    className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent"
+                                    onSelect={() => handleViewDetail(deal)}
+                                  >
                                     Detay Goruntule
                                   </DropdownMenu.Item>
-                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
+                                  <DropdownMenu.Item
+                                    className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent"
+                                    onSelect={() => handleViewDetail(deal)}
+                                  >
                                     Duzenle
                                   </DropdownMenu.Item>
-                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent">
-                                    <ArrowRight className="h-3.5 w-3.5" />
-                                    Sonraki Asama
-                                  </DropdownMenu.Item>
+                                  {nextStage && (
+                                    <DropdownMenu.Item
+                                      className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent"
+                                      onSelect={() => handleMoveToNextStage(deal)}
+                                    >
+                                      <ArrowRight className="h-3.5 w-3.5" />
+                                      Sonraki Asama
+                                    </DropdownMenu.Item>
+                                  )}
                                   <DropdownMenu.Separator className="my-1 h-px bg-border" />
-                                  <DropdownMenu.Item className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive outline-none hover:bg-destructive/10">
+                                  <DropdownMenu.Item
+                                    className="flex cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm text-destructive outline-none hover:bg-destructive/10"
+                                    onSelect={() => {
+                                      setDealToCancel(deal);
+                                      setCancelDialogOpen(true);
+                                    }}
+                                  >
                                     Iptal Et
                                   </DropdownMenu.Item>
                                 </DropdownMenu.Content>
