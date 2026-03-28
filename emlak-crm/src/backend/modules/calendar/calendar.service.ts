@@ -41,9 +41,9 @@ export class CalendarService {
     if (filters.search) {
       const term = filters.search.trim();
       where.OR = [
-        { title: { contains: term, mode: 'insensitive' } },
-        { notes: { contains: term, mode: 'insensitive' } },
-        { location: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term } },
+        { notes: { contains: term } },
+        { location: { contains: term } },
       ];
     }
 

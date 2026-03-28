@@ -1,7 +1,7 @@
 // ============================================================================
 // Emlak CRM - Prisma Schema
 // Turkish Real Estate CRM System
-// Database: PostgreSQL
+// Database: SQLite
 // ============================================================================
 
 generator client {
@@ -9,311 +9,46 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 // ============================================================================
-// ENUMS
+// ENUM VALUES (stored as String in SQLite)
 // ============================================================================
-
-enum UserRole {
-  ADMIN
-  MANAGER
-  AGENT
-  SECRETARY
-  VIEWER
-}
-
-enum ContactType {
-  INDIVIDUAL
-  CORPORATE
-}
-
-enum ContactSource {
-  PORTAL
-  REFERRAL
-  WALKIN
-  WEBSITE
-  WHATSAPP
-  PHONE
-  OTHER
-}
-
-enum ContactStatus {
-  LEAD
-  PROSPECT
-  ACTIVE
-  CUSTOMER
-  INACTIVE
-  LOST
-}
-
-enum InterestType {
-  BUYER
-  SELLER
-  RENTER
-  LANDLORD
-  INVESTOR
-}
-
-enum ListingType {
-  SALE
-  RENT
-  DAILY_RENT
-  TRANSFER
-  EXCHANGE
-}
-
-enum PropertyType {
-  APARTMENT
-  VILLA
-  DETACHED
-  RESIDENCE
-  OFFICE
-  SHOP
-  STORE
-  WAREHOUSE
-  FACTORY
-  LAND
-  ZONED_LAND
-  FIELD
-  GARDEN
-  HOTEL
-  APART_HOTEL
-}
-
-enum PropertyStatus {
-  DRAFT
-  ACTIVE
-  PASSIVE
-  SOLD
-  RENTED
-  WITHDRAWN
-}
-
-enum Currency {
-  TRY
-  USD
-  EUR
-  GBP
-}
-
-enum HeatingType {
-  DOGALGAZ_KOMBI
-  DOGALGAZ_KAT_KALORIFERI
-  MERKEZI_DOGALGAZ
-  MERKEZI_KOMURLUK
-  SOBA
-  YERDEN_ISITMA
-  KLIMA
-  GUNES_ENERJISI
-  ISI_POMPASI
-  YOK
-}
-
-enum DeedType {
-  KAT_MULKIYETI
-  KAT_IRTIFAKI
-  ARSA_TAPUSU
-  HISSELI_TAPU
-  MUSTEAKIL
-}
-
-enum EnergyClass {
-  A
-  B
-  C
-  D
-  E
-  F
-  G
-}
-
-enum UsageStatus {
-  BOS
-  KIRACILI
-  SAHIBINDEN
-  MUSTERILI
-}
-
-enum FacingDirection {
-  KUZEY
-  GUNEY
-  DOGU
-  BATI
-  KUZEY_DOGU
-  KUZEY_BATI
-  GUNEY_DOGU
-  GUNEY_BATI
-}
-
-enum DocumentType {
-  TAPU
-  ISKAN
-  DASK
-  IMAR
-  RUHSAT
-  ENERJI_KIMLIK
-  FLOOR_PLAN
-  CONTRACT
-  OTHER
-}
-
-enum DealType {
-  SALE
-  RENT
-}
-
-enum DealStage {
-  INQUIRY
-  SHOWING
-  NEGOTIATION
-  OFFER
-  DEPOSIT
-  CONTRACT
-  TAPU_TRANSFER
-  COMPLETED
-  LOST
-}
-
-enum CommissionStatus {
-  PENDING
-  INVOICED
-  PARTIALLY_PAID
-  PAID
-  CANCELLED
-}
-
-enum CommissionType {
-  BUYER_SIDE
-  SELLER_SIDE
-  REFERRAL
-}
-
-enum ActivityType {
-  CALL
-  MEETING
-  SHOWING
-  NOTE
-  EMAIL
-  WHATSAPP
-  SMS
-  TASK_COMPLETED
-  DEAL_STAGE_CHANGE
-  DOCUMENT_UPLOAD
-}
-
-enum TaskType {
-  CALL
-  MEETING
-  SHOWING
-  FOLLOWUP
-  DOCUMENT
-  INSPECTION
-  CONTRACT
-  PAYMENT
-  OTHER
-}
-
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum AppointmentType {
-  SHOWING
-  MEETING
-  APPRAISAL
-  CONTRACT_SIGNING
-  TAPU_APPOINTMENT
-  INSPECTION
-  OTHER
-}
-
-enum AppointmentStatus {
-  SCHEDULED
-  CONFIRMED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  NO_SHOW
-}
-
-enum PortalListingStatus {
-  DRAFT
-  PENDING
-  PUBLISHED
-  REJECTED
-  EXPIRED
-  REMOVED
-}
-
-enum SenderType {
-  USER
-  CONTACT
-  SYSTEM
-}
-
-enum MessageChannel {
-  WHATSAPP
-  SMS
-  EMAIL
-  INTERNAL
-}
-
-enum MessageStatus {
-  SENT
-  DELIVERED
-  READ
-  FAILED
-}
-
-enum ConversationStatus {
-  OPEN
-  PENDING
-  RESOLVED
-  CLOSED
-}
-
-enum NotificationType {
-  DEAL_UPDATE
-  TASK_DUE
-  TASK_ASSIGNED
-  APPOINTMENT_REMINDER
-  NEW_LEAD
-  NEW_MESSAGE
-  COMMISSION_UPDATE
-  PROPERTY_UPDATE
-  PORTAL_SYNC
-  SYSTEM
-}
-
-enum BuildingType {
-  SITE
-  APARTMENT_BLOCK
-  PLAZA
-  RESIDENCE
-}
-
-enum TemplateCategory {
-  GREETING
-  FOLLOWUP
-  SHOWING
-  OFFER
-  CONTRACT
-  PAYMENT
-  GENERAL
-}
+// UserRole: ADMIN, MANAGER, AGENT, SECRETARY, VIEWER
+// ContactType: INDIVIDUAL, CORPORATE
+// ContactSource: PORTAL, REFERRAL, WALKIN, WEBSITE, WHATSAPP, PHONE, OTHER
+// ContactStatus: LEAD, PROSPECT, ACTIVE, CUSTOMER, INACTIVE, LOST
+// InterestType: BUYER, SELLER, RENTER, LANDLORD, INVESTOR
+// ListingType: SALE, RENT, DAILY_RENT, TRANSFER, EXCHANGE
+// PropertyType: APARTMENT, VILLA, DETACHED, RESIDENCE, OFFICE, SHOP, STORE, WAREHOUSE, FACTORY, LAND, ZONED_LAND, FIELD, GARDEN, HOTEL, APART_HOTEL
+// PropertyStatus: DRAFT, ACTIVE, PASSIVE, SOLD, RENTED, WITHDRAWN
+// Currency: TRY, USD, EUR, GBP
+// HeatingType: DOGALGAZ_KOMBI, DOGALGAZ_KAT_KALORIFERI, MERKEZI_DOGALGAZ, MERKEZI_KOMURLUK, SOBA, YERDEN_ISITMA, KLIMA, GUNES_ENERJISI, ISI_POMPASI, YOK
+// DeedType: KAT_MULKIYETI, KAT_IRTIFAKI, ARSA_TAPUSU, HISSELI_TAPU, MUSTEAKIL
+// EnergyClass: A, B, C, D, E, F, G
+// UsageStatus: BOS, KIRACILI, SAHIBINDEN, MUSTERILI
+// FacingDirection: KUZEY, GUNEY, DOGU, BATI, KUZEY_DOGU, KUZEY_BATI, GUNEY_DOGU, GUNEY_BATI
+// DocumentType: TAPU, ISKAN, DASK, IMAR, RUHSAT, ENERJI_KIMLIK, FLOOR_PLAN, CONTRACT, OTHER
+// DealType: SALE, RENT
+// DealStage: INQUIRY, SHOWING, NEGOTIATION, OFFER, DEPOSIT, CONTRACT, TAPU_TRANSFER, COMPLETED, LOST
+// CommissionStatus: PENDING, INVOICED, PARTIALLY_PAID, PAID, CANCELLED
+// CommissionType: BUYER_SIDE, SELLER_SIDE, REFERRAL
+// ActivityType: CALL, MEETING, SHOWING, NOTE, EMAIL, WHATSAPP, SMS, TASK_COMPLETED, DEAL_STAGE_CHANGE, DOCUMENT_UPLOAD
+// TaskType: CALL, MEETING, SHOWING, FOLLOWUP, DOCUMENT, INSPECTION, CONTRACT, PAYMENT, OTHER
+// TaskPriority: LOW, MEDIUM, HIGH, URGENT
+// TaskStatus: TODO, IN_PROGRESS, COMPLETED, CANCELLED
+// AppointmentType: SHOWING, MEETING, APPRAISAL, CONTRACT_SIGNING, TAPU_APPOINTMENT, INSPECTION, OTHER
+// AppointmentStatus: SCHEDULED, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+// PortalListingStatus: DRAFT, PENDING, PUBLISHED, REJECTED, EXPIRED, REMOVED
+// SenderType: USER, CONTACT, SYSTEM
+// MessageChannel: WHATSAPP, SMS, EMAIL, INTERNAL
+// MessageStatus: SENT, DELIVERED, READ, FAILED
+// ConversationStatus: OPEN, PENDING, RESOLVED, CLOSED
+// NotificationType: DEAL_UPDATE, TASK_DUE, TASK_ASSIGNED, APPOINTMENT_REMINDER, NEW_LEAD, NEW_MESSAGE, COMMISSION_UPDATE, PROPERTY_UPDATE, PORTAL_SYNC, SYSTEM
+// BuildingType: SITE, APARTMENT_BLOCK, PLAZA, RESIDENCE
+// TemplateCategory: GREETING, FOLLOWUP, SHOWING, OFFER, CONTRACT, PAYMENT, GENERAL
 
 // ============================================================================
 // MODELS
@@ -334,10 +69,10 @@ model Office {
   licenseNumber       String?  @map("license_number")
   logoUrl             String?  @map("logo_url")
   website             String?
-  commissionRateBuy   Decimal? @map("commission_rate_buy") @db.Decimal(5, 2)
-  commissionRateSell  Decimal? @map("commission_rate_sell") @db.Decimal(5, 2)
-  commissionRateRent  Decimal? @map("commission_rate_rent") @db.Decimal(5, 2)
-  settings            Json?    @default("{}")
+  commissionRateBuy   Float?   @map("commission_rate_buy")
+  commissionRateSell  Float?   @map("commission_rate_sell")
+  commissionRateRent  Float?   @map("commission_rate_rent")
+  settings            String?  @default("{}")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
@@ -370,12 +105,12 @@ model User {
   firstName               String    @map("first_name")
   lastName                String    @map("last_name")
   avatarUrl               String?   @map("avatar_url")
-  role                    UserRole  @default(AGENT)
+  role                    String    @default("AGENT")
   tcKimlikNo              String?   @map("tc_kimlik_no")
   title                   String?
   isActive                Boolean   @default(true) @map("is_active")
   lastLoginAt             DateTime? @map("last_login_at")
-  notificationPreferences Json?     @default("{}") @map("notification_preferences")
+  notificationPreferences String?   @default("{}") @map("notification_preferences")
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
@@ -409,7 +144,7 @@ model Contact {
   id                     String        @id @default(cuid())
   officeId               String        @map("office_id")
   assignedUserId         String?       @map("assigned_user_id")
-  type                   ContactType   @default(INDIVIDUAL)
+  type                   String        @default("INDIVIDUAL")
   firstName              String        @map("first_name")
   lastName               String        @map("last_name")
   companyName            String?       @map("company_name")
@@ -421,16 +156,16 @@ model Contact {
   address                String?
   city                   String?
   district               String?
-  source                 ContactSource @default(OTHER)
+  source                 String        @default("OTHER")
   sourceDetail           String?       @map("source_detail")
-  status                 ContactStatus @default(LEAD)
-  interestType           InterestType? @map("interest_type")
-  budgetMin              Decimal?      @map("budget_min") @db.Decimal(15, 2)
-  budgetMax              Decimal?      @map("budget_max") @db.Decimal(15, 2)
-  preferredLocations     Json?         @map("preferred_locations")
-  preferredPropertyTypes Json?         @map("preferred_property_types")
+  status                 String        @default("LEAD")
+  interestType           String?       @map("interest_type")
+  budgetMin              Float?        @map("budget_min")
+  budgetMax              Float?        @map("budget_max")
+  preferredLocations     String?       @map("preferred_locations")
+  preferredPropertyTypes String?       @map("preferred_property_types")
   notes                  String?
-  tags                   String[]      @default([])
+  tags                   String        @default("[]")
   lastContactAt          DateTime?     @map("last_contact_at")
   nextFollowupAt         DateTime?     @map("next_followup_at")
   createdAt              DateTime      @default(now()) @map("created_at")
@@ -467,14 +202,14 @@ model Property {
   officeId            String           @map("office_id")
   assignedUserId      String?          @map("assigned_user_id")
   contactId           String?          @map("contact_id")
-  listingType         ListingType      @map("listing_type")
-  propertyType        PropertyType     @map("property_type")
-  propertyStatus      PropertyStatus   @default(DRAFT) @map("property_status")
+  listingType         String           @map("listing_type")
+  propertyType        String           @map("property_type")
+  propertyStatus      String           @default("DRAFT") @map("property_status")
   title               String
   description         String?
-  price               Decimal          @db.Decimal(15, 2)
-  currency            Currency         @default(TRY)
-  pricePerSqm         Decimal?         @map("price_per_sqm") @db.Decimal(15, 2)
+  price               Float
+  currency            String           @default("TRY")
+  pricePerSqm         Float?           @map("price_per_sqm")
   isNegotiable        Boolean          @default(false) @map("is_negotiable")
   ilId                String?          @map("il_id")
   ilceId              String?          @map("ilce_id")
@@ -490,26 +225,26 @@ model Property {
   floorNumber         Int?             @map("floor_number")
   totalFloors         Int?             @map("total_floors")
   buildingAge         Int?             @map("building_age")
-  heatingType         HeatingType?     @map("heating_type")
-  deedType            DeedType?        @map("deed_type")
+  heatingType         String?          @map("heating_type")
+  deedType            String?          @map("deed_type")
   adaNo               String?          @map("ada_no")
   parselNo            String?          @map("parsel_no")
   isInSite            Boolean          @default(false) @map("is_in_site")
   siteName            String?          @map("site_name")
-  duesAmount          Decimal?         @map("dues_amount") @db.Decimal(10, 2)
+  duesAmount          Float?           @map("dues_amount")
   hasIskan            Boolean?         @map("has_iskan")
   hasDask             Boolean?         @map("has_dask")
   daskPolicyNo        String?          @map("dask_policy_no")
   daskExpiryDate      DateTime?        @map("dask_expiry_date")
-  energyClass         EnergyClass?     @map("energy_class")
+  energyClass         String?          @map("energy_class")
   isEligibleForCredit Boolean?         @map("is_eligible_for_credit")
   exchangeAllowed     Boolean          @default(false) @map("exchange_allowed")
   isFurnished         Boolean?         @map("is_furnished")
-  usageStatus         UsageStatus?     @map("usage_status")
-  facingDirection     FacingDirection? @map("facing_direction")
-  viewType            String[]         @default([]) @map("view_type")
+  usageStatus         String?          @map("usage_status")
+  facingDirection     String?          @map("facing_direction")
+  viewType            String           @default("[]") @map("view_type")
   internalNotes       String?          @map("internal_notes")
-  tags                String[]         @default([])
+  tags                String           @default("[]")
   virtualTourUrl      String?          @map("virtual_tour_url")
   videoUrl            String?          @map("video_url")
   availableDate       DateTime?        @map("available_date")
@@ -620,7 +355,7 @@ model PropertyDocument {
   id           String       @id @default(cuid())
   propertyId   String       @map("property_id")
   uploadedById String       @map("uploaded_by_id")
-  type         DocumentType
+  type         String
   fileUrl      String       @map("file_url")
   fileName     String       @map("file_name")
   fileSize     Int?         @map("file_size")
@@ -646,17 +381,17 @@ model Deal {
   assignedUserId       String?          @map("assigned_user_id")
   contactId            String           @map("contact_id")
   propertyId           String           @map("property_id")
-  type                 DealType
-  stage                DealStage        @default(INQUIRY)
-  askingPrice          Decimal?         @map("asking_price") @db.Decimal(15, 2)
-  offerPrice           Decimal?         @map("offer_price") @db.Decimal(15, 2)
-  agreedPrice          Decimal?         @map("agreed_price") @db.Decimal(15, 2)
-  depositAmount        Decimal?         @map("deposit_amount") @db.Decimal(15, 2)
+  type                 String
+  stage                String           @default("INQUIRY")
+  askingPrice          Float?           @map("asking_price")
+  offerPrice           Float?           @map("offer_price")
+  agreedPrice          Float?           @map("agreed_price")
+  depositAmount        Float?           @map("deposit_amount")
   depositPaidAt        DateTime?        @map("deposit_paid_at")
-  commissionBuyerRate  Decimal?         @map("commission_buyer_rate") @db.Decimal(5, 2)
-  commissionSellerRate Decimal?         @map("commission_seller_rate") @db.Decimal(5, 2)
-  commissionTotal      Decimal?         @map("commission_total") @db.Decimal(15, 2)
-  commissionStatus     CommissionStatus @default(PENDING) @map("commission_status")
+  commissionBuyerRate  Float?           @map("commission_buyer_rate")
+  commissionSellerRate Float?           @map("commission_seller_rate")
+  commissionTotal      Float?           @map("commission_total")
+  commissionStatus     String           @default("PENDING") @map("commission_status")
   expectedCloseDate    DateTime?        @map("expected_close_date")
   actualCloseDate      DateTime?        @map("actual_close_date")
   tapuAppointmentDate  DateTime?        @map("tapu_appointment_date")
@@ -694,8 +429,8 @@ model Deal {
 model DealStageHistory {
   id          String     @id @default(cuid())
   dealId      String     @map("deal_id")
-  fromStage   DealStage? @map("from_stage")
-  toStage     DealStage  @map("to_stage")
+  fromStage   String?    @map("from_stage")
+  toStage     String     @map("to_stage")
   changedById String     @map("changed_by_id")
   notes       String?
   createdAt   DateTime   @default(now()) @map("created_at")
@@ -719,7 +454,7 @@ model Activity {
   contactId       String?      @map("contact_id")
   propertyId      String?      @map("property_id")
   dealId          String?      @map("deal_id")
-  type            ActivityType
+  type            String
   subject         String?
   description     String?
   durationMinutes Int?         @map("duration_minutes")
@@ -757,9 +492,9 @@ model Task {
   dealId         String?      @map("deal_id")
   title          String
   description    String?
-  type           TaskType     @default(OTHER)
-  priority       TaskPriority @default(MEDIUM)
-  status         TaskStatus   @default(TODO)
+  type           String       @default("OTHER")
+  priority       String       @default("MEDIUM")
+  status         String       @default("TODO")
   dueDate        DateTime?    @map("due_date")
   completedAt    DateTime?    @map("completed_at")
   isRecurring    Boolean      @default(false) @map("is_recurring")
@@ -796,13 +531,13 @@ model Appointment {
   contactId    String            @map("contact_id")
   propertyId   String?           @map("property_id")
   dealId       String?           @map("deal_id")
-  type         AppointmentType   @default(SHOWING)
+  type         String            @default("SHOWING")
   title        String
   notes        String?
   startTime    DateTime          @map("start_time")
   endTime      DateTime          @map("end_time")
   location     String?
-  status       AppointmentStatus @default(SCHEDULED)
+  status       String            @default("SCHEDULED")
   reminderSent Boolean           @default(false) @map("reminder_sent")
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
@@ -832,13 +567,13 @@ model Commission {
   dealId            String           @map("deal_id")
   officeId          String           @map("office_id")
   agentId           String           @map("agent_id")
-  type              CommissionType
-  rate              Decimal?         @db.Decimal(5, 2)
-  amount            Decimal          @db.Decimal(15, 2)
-  agentShareRate    Decimal?         @map("agent_share_rate") @db.Decimal(5, 2)
-  agentShareAmount  Decimal?         @map("agent_share_amount") @db.Decimal(15, 2)
-  officeShareAmount Decimal?         @map("office_share_amount") @db.Decimal(15, 2)
-  status            CommissionStatus @default(PENDING)
+  type              String
+  rate              Float?
+  amount            Float
+  agentShareRate    Float?           @map("agent_share_rate")
+  agentShareAmount  Float?           @map("agent_share_amount")
+  officeShareAmount Float?           @map("office_share_amount")
+  status            String           @default("PENDING")
   invoiceNo         String?          @map("invoice_no")
   paymentDate       DateTime?        @map("payment_date")
   notes             String?
@@ -870,7 +605,7 @@ model Portal {
   apiKeyEncrypted    String?  @map("api_key_encrypted")
   apiSecretEncrypted String?  @map("api_secret_encrypted")
   isActive           Boolean  @default(true) @map("is_active")
-  settings           Json?    @default("{}")
+  settings           String?  @default("{}")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
@@ -890,7 +625,7 @@ model PortalListing {
   propertyId        String              @map("property_id")
   portalId          String              @map("portal_id")
   externalListingId String?             @map("external_listing_id")
-  status            PortalListingStatus @default(DRAFT)
+  status            String              @default("DRAFT")
   publishedAt       DateTime?           @map("published_at")
   expiresAt         DateTime?           @map("expires_at")
   portalUrl         String?             @map("portal_url")
@@ -921,8 +656,8 @@ model Conversation {
   officeId       String             @map("office_id")
   contactId      String             @map("contact_id")
   assignedUserId String?            @map("assigned_user_id")
-  channel        MessageChannel
-  status         ConversationStatus @default(OPEN)
+  channel        String
+  status         String             @default("OPEN")
   lastMessageAt  DateTime?          @map("last_message_at")
   unreadCount    Int                @default(0) @map("unread_count")
   createdAt      DateTime           @default(now()) @map("created_at")
@@ -949,13 +684,13 @@ model Message {
   id                String         @id @default(cuid())
   officeId          String         @map("office_id")
   conversationId    String         @map("conversation_id")
-  senderType        SenderType     @map("sender_type")
+  senderType        String         @map("sender_type")
   senderId          String?        @map("sender_id")
-  channel           MessageChannel
+  channel           String
   content           String?
   mediaUrl          String?        @map("media_url")
   mediaType         String?        @map("media_type")
-  status            MessageStatus  @default(SENT)
+  status            String         @default("SENT")
   externalMessageId String?        @map("external_message_id")
   createdAt         DateTime       @default(now()) @map("created_at")
   updatedAt         DateTime       @updatedAt @map("updated_at")
@@ -979,11 +714,11 @@ model MessageTemplate {
   id                 String           @id @default(cuid())
   officeId           String           @map("office_id")
   name               String
-  channel            MessageChannel
-  category           TemplateCategory @default(GENERAL)
+  channel            String
+  category           String           @default("GENERAL")
   subject            String?
   content            String
-  variables          String[]         @default([])
+  variables          String           @default("[]")
   isWhatsappApproved Boolean          @default(false) @map("is_whatsapp_approved")
   whatsappTemplateId String?          @map("whatsapp_template_id")
   language           String           @default("tr")
@@ -1005,7 +740,7 @@ model MessageTemplate {
 model Notification {
   id        String           @id @default(cuid())
   userId    String           @map("user_id")
-  type      NotificationType
+  type      String
   title     String
   body      String?
   link      String?
@@ -1087,7 +822,7 @@ model Building {
   id          String       @id @default(cuid())
   officeId    String       @map("office_id")
   name        String
-  type        BuildingType @default(APARTMENT_BLOCK)
+  type        String       @default("APARTMENT_BLOCK")
   ilId        String?      @map("il_id")
   ilceId      String?      @map("ilce_id")
   mahalleId   String?      @map("mahalle_id")
@@ -1097,7 +832,7 @@ model Building {
   totalUnits  Int?         @map("total_units")
   totalFloors Int?         @map("total_floors")
   yearBuilt   Int?         @map("year_built")
-  features    Json?        @default("{}")
+  features    String?      @default("{}")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
 
@@ -1125,8 +860,8 @@ model AuditLog {
   action     String
   entityType String   @map("entity_type")
   entityId   String   @map("entity_id")
-  oldValues  Json?    @map("old_values")
-  newValues  Json?    @map("new_values")
+  oldValues  String?  @map("old_values")
+  newValues  String?  @map("new_values")
   ipAddress  String?  @map("ip_address")
   userAgent  String?  @map("user_agent")
   createdAt  DateTime @default(now()) @map("created_at")

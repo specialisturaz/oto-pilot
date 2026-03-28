@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { NotFoundError, ForbiddenError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
 import logger from '../../utils/logger';
@@ -17,7 +17,7 @@ interface NotificationFilterInput {
 
 interface CreateNotificationData {
   userId: string;
-  type: NotificationType;
+  type: string;
   title: string;
   body?: string;
   link?: string;
@@ -41,7 +41,7 @@ export class NotificationsService {
     }
 
     if (filters.type) {
-      where.type = filters.type as NotificationType;
+      where.type = filters.type as string;
     }
 
     const [notifications, total] = await Promise.all([

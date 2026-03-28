@@ -85,7 +85,7 @@ async function seedPortals(): Promise<void> {
         baseUrl: portal.baseUrl,
         apiUrl: portal.apiUrl,
         isActive: portal.isActive,
-        settings: portal.settings as Prisma.InputJsonValue,
+        settings: JSON.stringify(portal.settings),
       },
       create: {
         name: portal.name,
@@ -93,7 +93,7 @@ async function seedPortals(): Promise<void> {
         baseUrl: portal.baseUrl,
         apiUrl: portal.apiUrl,
         isActive: portal.isActive,
-        settings: portal.settings as Prisma.InputJsonValue,
+        settings: JSON.stringify(portal.settings),
       },
     });
   }
@@ -123,7 +123,7 @@ async function seedDemoOffice(): Promise<string> {
       commissionRateBuy: 2.0,
       commissionRateSell: 2.0,
       commissionRateRent: 50.0,
-      settings: {
+      settings: JSON.stringify({
         currency: "TRY",
         timezone: "Europe/Istanbul",
         language: "tr",
@@ -132,7 +132,7 @@ async function seedDemoOffice(): Promise<string> {
           end: "18:00",
           workDays: [1, 2, 3, 4, 5, 6],
         },
-      },
+      }),
     },
   });
 

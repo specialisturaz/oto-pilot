@@ -39,10 +39,10 @@ export class DealsService {
     if (filters.search) {
       const term = filters.search.trim();
       where.OR = [
-        { notes: { contains: term, mode: 'insensitive' } },
-        { contact: { firstName: { contains: term, mode: 'insensitive' } } },
-        { contact: { lastName: { contains: term, mode: 'insensitive' } } },
-        { property: { title: { contains: term, mode: 'insensitive' } } },
+        { notes: { contains: term } },
+        { contact: { firstName: { contains: term } } },
+        { contact: { lastName: { contains: term } } },
+        { property: { title: { contains: term } } },
       ];
     }
 

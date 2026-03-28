@@ -218,10 +218,10 @@ export class AuthService {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        notificationPreferences: {
+        notificationPreferences: JSON.stringify({
           passwordResetToken: resetTokenHash,
           passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        },
+        }),
       },
     });
 
@@ -248,7 +248,10 @@ export class AuthService {
     });
 
     const user = users.find((u) => {
-      const prefs = u.notificationPreferences as Record<string, any> | null;
+      let prefs: Record<string, any> | null = null;
+      try {
+        prefs = u.notificationPreferences ? JSON.parse(u.notificationPreferences as string) : null;
+      } catch { return false; }
       if (!prefs) return false;
       if (prefs.passwordResetToken !== tokenHash) return false;
       const expires = new Date(prefs.passwordResetExpires);
@@ -265,7 +268,7 @@ export class AuthService {
       where: { id: user.id },
       data: {
         passwordHash: hashedPassword,
-        notificationPreferences: {},
+        notificationPreferences: JSON.stringify({}),
       },
     });
 

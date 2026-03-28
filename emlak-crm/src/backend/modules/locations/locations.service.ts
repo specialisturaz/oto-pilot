@@ -113,8 +113,8 @@ export class LocationsService {
       prisma.il.findMany({
         where: {
           OR: [
-            { name: { contains: term, mode: 'insensitive' } },
-            { plateCode: { contains: term, mode: 'insensitive' } },
+            { name: { contains: term } },
+            { plateCode: { contains: term } },
           ],
         },
         take: limit,
@@ -125,7 +125,7 @@ export class LocationsService {
       // Search ilceler
       prisma.ilce.findMany({
         where: {
-          name: { contains: term, mode: 'insensitive' },
+          name: { contains: term },
         },
         take: limit,
         orderBy: { name: 'asc' },
@@ -139,7 +139,7 @@ export class LocationsService {
       // Search mahalleler
       prisma.mahalle.findMany({
         where: {
-          name: { contains: term, mode: 'insensitive' },
+          name: { contains: term },
         },
         take: limit,
         orderBy: { name: 'asc' },

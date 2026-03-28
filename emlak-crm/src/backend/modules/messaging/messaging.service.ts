@@ -42,10 +42,10 @@ export class MessagingService {
       const term = filters.search.trim();
       where.contact = {
         OR: [
-          { firstName: { contains: term, mode: 'insensitive' } },
-          { lastName: { contains: term, mode: 'insensitive' } },
-          { phone: { contains: term, mode: 'insensitive' } },
-          { email: { contains: term, mode: 'insensitive' } },
+          { firstName: { contains: term } },
+          { lastName: { contains: term } },
+          { phone: { contains: term } },
+          { email: { contains: term } },
         ],
       };
     }

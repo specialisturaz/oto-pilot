@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, type UserRole } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { NotFoundError, ForbiddenError, BadRequestError, ConflictError } from '../../middleware/errorHandler';
 import { parsePaginationParams, createPaginatedResponse } from '../../utils/pagination';
@@ -49,10 +49,10 @@ export class UsersService {
     if (filters.search) {
       const term = filters.search.trim();
       where.OR = [
-        { firstName: { contains: term, mode: 'insensitive' } },
-        { lastName: { contains: term, mode: 'insensitive' } },
-        { email: { contains: term, mode: 'insensitive' } },
-        { phone: { contains: term, mode: 'insensitive' } },
+        { firstName: { contains: term } },
+        { lastName: { contains: term } },
+        { email: { contains: term } },
+        { phone: { contains: term } },
       ];
     }
 
@@ -226,13 +226,13 @@ export class UsersService {
     if ((data as any).first_name !== undefined) updateData.firstName = (data as any).first_name;
     if ((data as any).last_name !== undefined) updateData.lastName = (data as any).last_name;
     if (data.phone !== undefined) updateData.phone = data.phone;
-    if (data.role !== undefined) updateData.role = data.role as UserRole;
+    if (data.role !== undefined) updateData.role = data.role as string;
     if (data.title !== undefined) updateData.title = data.title;
     if ((data as any).tc_kimlik_no !== undefined) updateData.tcKimlikNo = (data as any).tc_kimlik_no;
     if ((data as any).avatar_url !== undefined) updateData.avatarUrl = (data as any).avatar_url;
     if ((data as any).is_active !== undefined) updateData.isActive = (data as any).is_active;
     if ((data as any).notification_preferences !== undefined) {
-      updateData.notificationPreferences = (data as any).notification_preferences as Prisma.InputJsonValue;
+      updateData.notificationPreferences = typeof (data as any).notification_preferences === 'string' ? (data as any).notification_preferences : JSON.stringify((data as any).notification_preferences);
     }
 
     const updated = await prisma.user.update({
@@ -257,7 +257,7 @@ export class UsersService {
     if (data.title !== undefined) profileData.title = data.title;
     if ((data as any).avatar_url !== undefined) profileData.avatarUrl = (data as any).avatar_url;
     if ((data as any).notification_preferences !== undefined) {
-      profileData.notificationPreferences = (data as any).notification_preferences as Prisma.InputJsonValue;
+      profileData.notificationPreferences = typeof (data as any).notification_preferences === 'string' ? (data as any).notification_preferences : JSON.stringify((data as any).notification_preferences);
     }
 
     const updated = await prisma.user.update({

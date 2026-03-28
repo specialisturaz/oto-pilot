@@ -87,7 +87,7 @@ export class SettingsService {
         ...(data.commission_rate_buy !== undefined && { commissionRateBuy: data.commission_rate_buy }),
         ...(data.commission_rate_sell !== undefined && { commissionRateSell: data.commission_rate_sell }),
         ...(data.commission_rate_rent !== undefined && { commissionRateRent: data.commission_rate_rent }),
-        ...(data.settings !== undefined && { settings: data.settings as Prisma.InputJsonValue }),
+        ...(data.settings !== undefined && { settings: typeof data.settings === 'string' ? data.settings : JSON.stringify(data.settings) }),
       },
     });
 
@@ -121,8 +121,8 @@ export class SettingsService {
     if (filters.search) {
       const term = filters.search.trim();
       where.OR = [
-        { name: { contains: term, mode: 'insensitive' } },
-        { content: { contains: term, mode: 'insensitive' } },
+        { name: { contains: term } },
+        { content: { contains: term } },
       ];
     }
 
@@ -178,7 +178,7 @@ export class SettingsService {
         category: (data.category || 'GENERAL') as any,
         subject: data.subject || null,
         content: data.content,
-        variables: data.variables || [],
+        variables: JSON.stringify(data.variables || []),
         language: data.language || 'tr',
       },
     });
@@ -202,7 +202,7 @@ export class SettingsService {
         ...(data.category !== undefined && { category: data.category as any }),
         ...(data.subject !== undefined && { subject: data.subject }),
         ...(data.content !== undefined && { content: data.content }),
-        ...(data.variables !== undefined && { variables: data.variables }),
+        ...(data.variables !== undefined && { variables: JSON.stringify(data.variables) }),
         ...(data.language !== undefined && { language: data.language }),
       },
     });

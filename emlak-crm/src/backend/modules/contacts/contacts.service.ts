@@ -27,11 +27,11 @@ export class ContactsService {
     if (filters.search) {
       const searchTerm = filters.search.trim();
       where.OR = [
-        { firstName: { contains: searchTerm, mode: 'insensitive' } },
-        { lastName: { contains: searchTerm, mode: 'insensitive' } },
-        { email: { contains: searchTerm, mode: 'insensitive' } },
+        { firstName: { contains: searchTerm } },
+        { lastName: { contains: searchTerm } },
+        { email: { contains: searchTerm } },
         { phone: { contains: searchTerm } },
-        { companyName: { contains: searchTerm, mode: 'insensitive' } },
+        { companyName: { contains: searchTerm } },
       ];
     }
 
@@ -57,7 +57,7 @@ export class ContactsService {
 
     if (filters.tags) {
       const tagList = filters.tags.split(',').map((t) => t.trim());
-      where.tags = { hasSome: tagList };
+      where.AND = tagList.map((tag) => ({ tags: { contains: tag } }));
     }
 
     if (filters.created_from || filters.created_to) {

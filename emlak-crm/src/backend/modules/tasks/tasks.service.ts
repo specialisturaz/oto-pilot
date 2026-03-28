@@ -26,17 +26,17 @@ export class TasksService {
     if (filters.search) {
       const term = filters.search.trim();
       where.OR = [
-        { title: { contains: term, mode: 'insensitive' } },
-        { description: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term } },
+        { description: { contains: term } },
       ];
     }
 
     if (filters.type) {
-      where.type = filters.type as Prisma.EnumTaskTypeFilter;
+      where.type = filters.type as any;
     }
 
     if (filters.priority) {
-      where.priority = filters.priority as Prisma.EnumTaskPriorityFilter;
+      where.priority = filters.priority as any;
     }
 
     if (filters.status) {

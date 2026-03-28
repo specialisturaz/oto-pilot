@@ -30,9 +30,9 @@ export class PropertiesService {
     if (filters.search) {
       const term = filters.search.trim();
       where.OR = [
-        { title: { contains: term, mode: 'insensitive' } },
-        { description: { contains: term, mode: 'insensitive' } },
-        { address: { contains: term, mode: 'insensitive' } },
+        { title: { contains: term } },
+        { description: { contains: term } },
+        { address: { contains: term } },
       ];
     }
 
