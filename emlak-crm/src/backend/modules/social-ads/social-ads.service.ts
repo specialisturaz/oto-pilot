@@ -15,13 +15,45 @@ function formatTurkishPrice(price: number, currency = 'TRY'): string {
   }).format(price);
 }
 
-interface AdContent {
-  headline: string;
-  description: string;
-  hashtags: string[];
-  callToAction: string;
-  imageUrl: string | null;
-  suggestedBudget: { daily: number; weekly: number; currency: string };
+function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.substring(0, max - 3) + '...';
+}
+
+// ---- Types ----
+
+interface PropertyData {
+  id: string;
+  title: string;
+  description: string | null;
+  propertyType: string;
+  listingType: string;
+  price: number;
+  currency: string | null;
+  roomCount: string | null;
+  grossSqm: number | null;
+  netSqm: number | null;
+  floorNumber: number | null;
+  totalFloors: number | null;
+  buildingAge: number | null;
+  il: { name: string } | null;
+  ilce: { name: string } | null;
+  mahalle: { name: string } | null;
+  photos: Array<{ url: string; orderIndex: number }>;
+  features: Array<{ feature: { nameTr: string; category: string } }>;
+  office: { name: string; phone: string | null; email: string | null; logoUrl: string | null; website: string | null };
+  assignedUser: { firstName: string; lastName: string; phone: string | null } | null;
+}
+
+export interface FacebookAdPack {
+  headlines: string[];
+  primaryTexts: string[];
+  descriptions: string[];
+  cta: string;
+  imageSpecs: { feed: string; square: string; story: string };
+  targeting: TargetingSuggestion;
+  budget: BudgetRecommendation;
+  estimatedReach: { daily: string; weekly: string };
   propertyTitle: string;
   propertyPrice: string;
   location: string;
@@ -29,11 +61,68 @@ interface AdContent {
   sqm: string;
 }
 
+export interface InstagramAdPack {
+  feedCaption: string;
+  storyTextOverlays: string[];
+  hashtags: { high: string[]; medium: string[]; niche: string[] };
+  bestPostingTime: string;
+  carouselSuggestions: string[];
+  locationTag: string;
+  targeting: TargetingSuggestion;
+  budget: BudgetRecommendation;
+  propertyTitle: string;
+  propertyPrice: string;
+  location: string;
+  roomCount: string;
+  sqm: string;
+}
+
+export interface GoogleAdPack {
+  headlines: string[];
+  descriptions: string[];
+  displayUrlPaths: string[];
+  keywords: { primary: string[]; secondary: string[]; negative: string[] };
+  bidStrategy: string;
+  targeting: TargetingSuggestion;
+  budget: BudgetRecommendation;
+  propertyTitle: string;
+  propertyPrice: string;
+  location: string;
+  roomCount: string;
+  sqm: string;
+}
+
+export interface KeywordsResult {
+  primary: string[];
+  secondary: string[];
+  negative: string[];
+  propertyTitle: string;
+  location: string;
+}
+
+export interface TargetingSuggestion {
+  location: string;
+  radius: string;
+  ageRange: string;
+  interests: string[];
+  behaviors: string[];
+  customAudiences: string[];
+}
+
+export interface BudgetRecommendation {
+  dailyBudget: number;
+  weeklyBudget: number;
+  currency: string;
+  estimatedImpressions: { daily: string; weekly: string };
+  estimatedClicks: { daily: string; weekly: string };
+  reasoning: string;
+}
+
 export class SocialAdsService {
   /**
    * Emlak verisini reklam icin hazirla.
    */
-  private async getPropertyForAd(propertyId: string, user: AuthenticatedUser) {
+  private async getPropertyForAd(propertyId: string, user: AuthenticatedUser): Promise<PropertyData> {
     const property = await prisma.property.findUnique({
       where: { id: propertyId },
       include: {
@@ -43,10 +132,10 @@ export class SocialAdsService {
         il: { select: { name: true } },
         ilce: { select: { name: true } },
         mahalle: { select: { name: true } },
-        photos: { orderBy: { orderIndex: 'asc' }, take: 5 },
+        photos: { orderBy: { orderIndex: 'asc' }, take: 10 },
         features: {
           include: { feature: true },
-          take: 10,
+          take: 15,
         },
         assignedUser: {
           select: { firstName: true, lastName: true, phone: true },
@@ -65,87 +154,368 @@ export class SocialAdsService {
     return property;
   }
 
+  // ---- Helpers ----
+
+  private getListingTypeLabel(listingType: string): string {
+    return listingType.toLocaleUpperCase('tr-TR').includes('SATILIK') ? 'Satilik' : 'Kiralik';
+  }
+
+  private getListingTypeLabelUpper(listingType: string): string {
+    return listingType.toLocaleUpperCase('tr-TR').includes('SATILIK') ? 'SATILIK' : 'KIRALIK';
+  }
+
+  private getLocation(property: PropertyData): string {
+    return [property.mahalle?.name, property.ilce?.name, property.il?.name].filter(Boolean).join(', ');
+  }
+
+  private getShortLocation(property: PropertyData): string {
+    return [property.ilce?.name, property.il?.name].filter(Boolean).join(', ');
+  }
+
+  private getFeatureNames(property: PropertyData): string[] {
+    return property.features.map((pf) => pf.feature.nameTr);
+  }
+
   /**
-   * Facebook reklam icerigi olustur.
+   * Hedef kitle onerisi olustur.
    */
-  async generateFacebookAd(propertyId: string, user: AuthenticatedUser): Promise<AdContent> {
-    const property = await this.getPropertyForAd(propertyId, user);
-    const baseUrl = config.server.frontendUrl || 'http://localhost:3000';
+  private generateTargeting(property: PropertyData): TargetingSuggestion {
+    const il = property.il?.name || 'Turkiye';
+    const ilce = property.ilce?.name;
+    const locationStr = ilce ? `${ilce}, ${il}` : il;
 
-    const locationParts = [property.mahalle?.name, property.ilce?.name, property.il?.name].filter(Boolean);
-    const location = locationParts.join(', ');
-    const shortLocation = locationParts.slice(0, 2).join(', ');
+    const pType = property.propertyType.toLocaleLowerCase('tr-TR');
+    const price = property.price;
+    const listingType = this.getListingTypeLabel(property.listingType);
 
-    const listingType = property.listingType.toLocaleUpperCase('tr-TR').includes('SATILIK')
-      ? 'Satilik'
-      : 'Kiralik';
+    // Yas araligi: gayrimenkul tipine ve fiyata gore
+    let ageRange = '25-55';
+    if (pType.includes('villa') || price > 10_000_000) {
+      ageRange = '35-65';
+    } else if (pType.includes('studi') || pType.includes('1+0') || price < 1_500_000) {
+      ageRange = '22-35';
+    } else if (pType.includes('arsa') || pType.includes('tarla')) {
+      ageRange = '30-60';
+    }
 
-    const formattedPrice = formatTurkishPrice(property.price, property.currency || 'TRY');
-
-    const featureNames = property.features.map((pf) => pf.feature.nameTr);
-    const featureList = featureNames.length > 0 ? featureNames.slice(0, 5).join(', ') : '';
-
-    const headline = `${listingType} ${property.propertyType || 'Gayrimenkul'} - ${shortLocation}`;
-
-    const descriptionParts: string[] = [
-      `${property.title}`,
-      '',
-      `Fiyat: ${formattedPrice}`,
-      `Konum: ${location}`,
+    // Ilgi alanlari
+    const interests: string[] = [
+      'Gayrimenkul',
+      'Emlak yatirimi',
+      'Konut',
     ];
 
-    if (property.roomCount) {
-      descriptionParts.push(`Oda: ${property.roomCount}`);
-    }
-    if (property.grossSqm) {
-      descriptionParts.push(`Alan: ${property.grossSqm} m2 brut${property.netSqm ? ` / ${property.netSqm} m2 net` : ''}`);
-    }
-    if (property.floorNumber != null) {
-      descriptionParts.push(`Kat: ${property.floorNumber}${property.totalFloors ? `/${property.totalFloors}` : ''}`);
-    }
-    if (property.buildingAge != null) {
-      descriptionParts.push(`Bina Yasi: ${property.buildingAge} yil`);
-    }
-    if (featureList) {
-      descriptionParts.push('');
-      descriptionParts.push(`Ozellikler: ${featureList}`);
-    }
-    if (property.description) {
-      const shortDesc = property.description.length > 200
-        ? property.description.substring(0, 200) + '...'
-        : property.description;
-      descriptionParts.push('');
-      descriptionParts.push(shortDesc);
+    if (listingType === 'Satilik') {
+      interests.push('Konut kredisi', 'Tasinma hizmetleri', 'Ev dekorasyonu');
+      if (price > 5_000_000) {
+        interests.push('Luksemburg yasam', 'Yatirim', 'Tasarim');
+      }
+    } else {
+      interests.push('Kiralik ev', 'Universite', 'Tasinma');
     }
 
-    descriptionParts.push('');
-    descriptionParts.push(`Detayli bilgi icin iletisime gecin!`);
-    if (property.assignedUser) {
-      descriptionParts.push(`${property.assignedUser.firstName} ${property.assignedUser.lastName}${property.assignedUser.phone ? ` - ${property.assignedUser.phone}` : ''}`);
+    if (pType.includes('villa')) {
+      interests.push('Villa yasam', 'Bahce', 'Havuz');
     }
-    descriptionParts.push(property.office.name);
+    if (pType.includes('arsa')) {
+      interests.push('Insaat', 'Arazi yatirimi', 'Muteahhitlik');
+    }
 
-    const hashtags = this.generateHashtags(property, 'facebook');
+    // Davranislar
+    const behaviors: string[] = [
+      'Gayrimenkul siteleri ziyaretcileri',
+      'Emlak uygulamasi kullanicilari',
+    ];
 
-    const imageUrl = property.photos[0]
-      ? (property.photos[0].url.startsWith('http') ? property.photos[0].url : `${baseUrl}${property.photos[0].url}`)
-      : null;
-
-    const suggestedBudget = {
-      daily: property.price > 5000000 ? 150 : property.price > 1000000 ? 100 : 50,
-      weekly: property.price > 5000000 ? 750 : property.price > 1000000 ? 500 : 250,
-      currency: 'TRY',
-    };
-
-    logger.info(`Facebook reklam icerigi olusturuldu: ilan ${propertyId}`);
+    if (listingType === 'Satilik') {
+      behaviors.push('Banka kredi basvurusu yapanlar');
+      if (price > 3_000_000) {
+        behaviors.push('Yuksek gelir grubu');
+      }
+    }
 
     return {
-      headline,
-      description: descriptionParts.join('\n'),
-      hashtags,
-      callToAction: 'Hemen bilgi alin!',
-      imageUrl,
-      suggestedBudget,
+      location: locationStr,
+      radius: price > 5_000_000 ? '50 km (genis bolge - lux segment)' : '25 km',
+      ageRange,
+      interests,
+      behaviors,
+      customAudiences: [
+        'Web sitesi ziyaretcileri (son 30 gun)',
+        'Mevcut musteri listesi benzerleri',
+        'Emlak portali etkilesimcileri',
+      ],
+    };
+  }
+
+  /**
+   * Butce onerisi olustur.
+   */
+  private generateBudgetRecommendation(price: number, listingType: string): BudgetRecommendation {
+    const isSale = listingType.toLocaleUpperCase('tr-TR').includes('SATILIK');
+    const formattedPrice = formatTurkishPrice(price);
+
+    let daily: number;
+    let reasoning: string;
+
+    if (isSale) {
+      if (price > 20_000_000) {
+        daily = 300;
+        reasoning = `Bu ilan ${formattedPrice} degerinde lux segment bir gayrimenkul. Gunluk 300 TL butce ile hedef kitleye etkili erisim saglanabilir. Beklenen komisyon geliri yuksek oldugu icin reklam yatirimi makul.`;
+      } else if (price > 10_000_000) {
+        daily = 200;
+        reasoning = `${formattedPrice} degerindeki bu ilan icin gunluk 200 TL reklam butcesi oneriyoruz. Ust segment alicilara ulasmak icin yeterli bir butce.`;
+      } else if (price > 5_000_000) {
+        daily = 150;
+        reasoning = `${formattedPrice} fiyatli bu ilan icin gunluk 150 TL butce ile orta-ust segment alicilara ulasabilirsiniz.`;
+      } else if (price > 2_000_000) {
+        daily = 100;
+        reasoning = `${formattedPrice} fiyat araligindaki ilanlar icin gunluk 100 TL reklam butcesi iyi bir baslangic noktasidir.`;
+      } else {
+        daily = 60;
+        reasoning = `${formattedPrice} degerindeki bu ilan icin gunluk 60 TL butce ile yerel hedef kitleye etkili erisim saglanabilir.`;
+      }
+    } else {
+      // Kiralik icin daha dusuk butce
+      if (price > 50_000) {
+        daily = 100;
+        reasoning = `Aylik ${formattedPrice} kira bedelli bu ilan icin gunluk 100 TL reklam butcesi uygundur.`;
+      } else if (price > 20_000) {
+        daily = 60;
+        reasoning = `Aylik ${formattedPrice} kira icin gunluk 60 TL butce yeterli olacaktir.`;
+      } else {
+        daily = 40;
+        reasoning = `Aylik ${formattedPrice} kira bedeli icin gunluk 40 TL butce ile hizli sonuc alinabilir.`;
+      }
+    }
+
+    const weekly = daily * 7;
+    const cpm = 25; // Tahmini CPM (TRY)
+    const ctr = 0.018; // Ortalama CTR
+
+    const dailyImpressions = Math.round((daily / cpm) * 1000);
+    const dailyClicks = Math.round(dailyImpressions * ctr);
+    const weeklyImpressions = dailyImpressions * 7;
+    const weeklyClicks = dailyClicks * 7;
+
+    return {
+      dailyBudget: daily,
+      weeklyBudget: weekly,
+      currency: 'TRY',
+      estimatedImpressions: {
+        daily: `${dailyImpressions.toLocaleString('tr-TR')} - ${Math.round(dailyImpressions * 1.4).toLocaleString('tr-TR')}`,
+        weekly: `${weeklyImpressions.toLocaleString('tr-TR')} - ${Math.round(weeklyImpressions * 1.4).toLocaleString('tr-TR')}`,
+      },
+      estimatedClicks: {
+        daily: `${dailyClicks} - ${Math.round(dailyClicks * 1.5)}`,
+        weekly: `${weeklyClicks} - ${Math.round(weeklyClicks * 1.5)}`,
+      },
+      reasoning,
+    };
+  }
+
+  /**
+   * Hashtag'ler olustur (kategorilere ayrilmis).
+   */
+  private generateHashtags(property: PropertyData): { high: string[]; medium: string[]; niche: string[] } {
+    const listingType = property.listingType.toLocaleUpperCase('tr-TR');
+    const isSale = listingType.includes('SATILIK');
+    const pType = property.propertyType.toLocaleLowerCase('tr-TR');
+
+    // Yuksek hacim - genel emlak
+    const high: string[] = [
+      '#emlak',
+      '#gayrimenkul',
+      '#ev',
+      '#konut',
+      isSale ? '#satilik' : '#kiralik',
+      isSale ? '#satilikemlak' : '#kiralikemlak',
+      '#emlakofisi',
+      '#tasinmaz',
+      '#yatirim',
+      '#turkiyeemlak',
+    ];
+
+    // Orta hacim - tip ve konum bazli
+    const medium: string[] = [];
+
+    if (pType.includes('daire')) {
+      medium.push('#daire', isSale ? '#satilikdaire' : '#kiralikdaire', '#apartman');
+    } else if (pType.includes('villa')) {
+      medium.push('#villa', isSale ? '#satilikvilla' : '#kiralikvilla', '#mustakilev');
+    } else if (pType.includes('arsa')) {
+      medium.push('#arsa', '#satilikarsa', '#arsayatirim');
+    } else if (pType.includes('dublex')) {
+      medium.push('#dublex', '#dublexdaire');
+    } else if (pType.includes('residence')) {
+      medium.push('#residence', '#residencedaire');
+    } else {
+      medium.push('#gayrimenkulyatirim');
+    }
+
+    if (property.il?.name) {
+      const ilSlug = property.il.name.toLocaleLowerCase('tr-TR').replace(/\s+/g, '').replace(/[^a-zA-Z0-9\u00C0-\u024F\u0100-\u017F]/g, '');
+      medium.push(`#${ilSlug}`, `#${ilSlug}emlak`);
+    }
+    if (property.ilce?.name) {
+      const ilceSlug = property.ilce.name.toLocaleLowerCase('tr-TR').replace(/\s+/g, '').replace(/[^a-zA-Z0-9\u00C0-\u024F\u0100-\u017F]/g, '');
+      medium.push(`#${ilceSlug}`);
+    }
+
+    medium.push('#emlakdanismani', '#emlakcisi', '#gayrimenkulyatirim');
+
+    // Dusuk hacim - nis
+    const niche: string[] = [];
+
+    if (property.mahalle?.name) {
+      const mahalleSlug = property.mahalle.name.toLocaleLowerCase('tr-TR').replace(/\s+/g, '').replace(/[^a-zA-Z0-9\u00C0-\u024F\u0100-\u017F]/g, '');
+      niche.push(`#${mahalleSlug}`);
+    }
+    if (property.roomCount) {
+      niche.push(`#${property.roomCount.replace('+', 'arti')}`);
+    }
+
+    niche.push('#yeniev', '#evdekorasyonu', '#evsahipliigi', '#mimari');
+
+    if (isSale) {
+      niche.push('#konutkredisi', '#tapudevri', '#yatirimaracimlak');
+    } else {
+      niche.push('#ogrencieve', '#kiralikdairebul');
+    }
+
+    // Ozellik bazli
+    const featureNames = this.getFeatureNames(property).map(f => f.toLocaleLowerCase('tr-TR'));
+    if (featureNames.some(f => f.includes('havuz'))) niche.push('#havuzluev');
+    if (featureNames.some(f => f.includes('deniz'))) niche.push('#denizmanzarali');
+    if (featureNames.some(f => f.includes('bahce'))) niche.push('#bahcelieyasamm');
+
+    niche.push('#insaat', '#satisasunuldu');
+
+    return {
+      high: [...new Set(high)].slice(0, 10),
+      medium: [...new Set(medium)].slice(0, 10),
+      niche: [...new Set(niche)].slice(0, 10),
+    };
+  }
+
+  /**
+   * SEO anahtar kelimeleri olustur.
+   */
+  private generateKeywords(property: PropertyData): { primary: string[]; secondary: string[]; negative: string[] } {
+    const listingType = this.getListingTypeLabel(property.listingType).toLocaleLowerCase('tr-TR');
+    const pType = property.propertyType.toLocaleLowerCase('tr-TR');
+    const il = property.il?.name?.toLocaleLowerCase('tr-TR') || '';
+    const ilce = property.ilce?.name?.toLocaleLowerCase('tr-TR') || '';
+    const mahalle = property.mahalle?.name?.toLocaleLowerCase('tr-TR') || '';
+
+    const primary: string[] = [];
+    const secondary: string[] = [];
+
+    // Ana anahtar kelimeler
+    if (il) primary.push(`${listingType} ${pType} ${il}`);
+    if (ilce) primary.push(`${listingType} ${pType} ${ilce}`);
+    if (il && ilce) primary.push(`${ilce} ${listingType} ${pType}`);
+    primary.push(`${listingType} ${pType}`);
+    if (property.roomCount && il) {
+      primary.push(`${property.roomCount} ${listingType} ${pType} ${il}`);
+    }
+    if (il) primary.push(`${il} emlak`);
+    if (ilce) primary.push(`${ilce} emlak`);
+
+    // Ikincil anahtar kelimeler
+    if (mahalle) secondary.push(`${mahalle} ${listingType} ${pType}`);
+    if (property.roomCount) secondary.push(`${property.roomCount} ${pType}`);
+    if (property.grossSqm && il) secondary.push(`${property.grossSqm} m2 ${pType} ${il}`);
+    secondary.push(`${listingType} ev`);
+    secondary.push(`${listingType} konut`);
+    if (il) secondary.push(`${il} gayrimenkul`);
+    secondary.push('emlak ilanlari');
+    secondary.push(`${listingType} gayrimenkul`);
+
+    // Negatif anahtar kelimeler (rakip/alakasiz trafigi engellemek icin)
+    const isSale = listingType === 'satilik';
+    const negative: string[] = [
+      isSale ? 'kiralik' : 'satilik',
+      'ucretsiz',
+      'bedava',
+      'takas',
+      'devren',
+      'is yeri',
+      'ofis',
+      'depo',
+      'fabrika',
+      'ciftlik',
+    ];
+
+    return {
+      primary: [...new Set(primary)].slice(0, 15),
+      secondary: [...new Set(secondary)].slice(0, 10),
+      negative: [...new Set(negative)].slice(0, 10),
+    };
+  }
+
+  // ---- Public Methods ----
+
+  /**
+   * Facebook reklam paketi olustur (A/B test varyantlari ile).
+   */
+  async generateFacebookAd(propertyId: string, user: AuthenticatedUser): Promise<FacebookAdPack> {
+    const property = await this.getPropertyForAd(propertyId, user);
+    const location = this.getLocation(property);
+    const shortLocation = this.getShortLocation(property);
+    const listingType = this.getListingTypeLabel(property.listingType);
+    const formattedPrice = formatTurkishPrice(property.price, property.currency || 'TRY');
+    const featureNames = this.getFeatureNames(property);
+    const topFeature = featureNames[0] || '';
+    const targeting = this.generateTargeting(property);
+    const budget = this.generateBudgetRecommendation(property.price, property.listingType);
+
+    // 3 baslik varyanti (max 40 karakter)
+    const headlines: string[] = [
+      truncate(`${listingType} ${property.propertyType} - ${shortLocation}`, 40),
+      truncate(`${shortLocation} ${listingType} ${property.propertyType}`, 40),
+      truncate(`${formattedPrice} - ${shortLocation} ${property.propertyType}`, 40),
+    ];
+
+    // 3 birincil metin varyanti (max 125 karakter ideal)
+    const roomInfo = property.roomCount ? `${property.roomCount}` : '';
+    const sqmInfo = property.grossSqm ? `${property.grossSqm} m2` : '';
+    const specs = [roomInfo, sqmInfo].filter(Boolean).join(', ');
+
+    const primaryTexts: string[] = [
+      truncate(`${listingType} ${property.propertyType} ${formattedPrice}. ${location}${specs ? ` | ${specs}` : ''}. Detayli bilgi icin tiklayin!`, 125),
+      truncate(`${location} - ${formattedPrice}${specs ? `. ${specs}` : ''}${topFeature ? `. ${topFeature}` : ''}. Hemen inceleyin!`, 125),
+      truncate(`Firsat! ${shortLocation} ${listingType.toLocaleLowerCase('tr-TR')} ${property.propertyType.toLocaleLowerCase('tr-TR')} ${formattedPrice}. ${specs || 'Detaylar icin tiklayin!'}`, 125),
+    ];
+
+    // 2 aciklama varyanti (max 30 karakter)
+    const descriptions: string[] = [
+      truncate(`${property.office.name} - Bilgi alin`, 30),
+      truncate(`${shortLocation} ${listingType}`, 30),
+    ];
+
+    // Tahmini erisim
+    const dailyImpressionBase = Math.round((budget.dailyBudget / 25) * 1000);
+    const estimatedReach = {
+      daily: `${Math.round(dailyImpressionBase * 0.6).toLocaleString('tr-TR')} - ${Math.round(dailyImpressionBase * 0.9).toLocaleString('tr-TR')} kisi`,
+      weekly: `${Math.round(dailyImpressionBase * 0.6 * 5).toLocaleString('tr-TR')} - ${Math.round(dailyImpressionBase * 0.9 * 7).toLocaleString('tr-TR')} kisi`,
+    };
+
+    logger.info(`Facebook reklam paketi olusturuldu: ilan ${propertyId}`);
+
+    return {
+      headlines,
+      primaryTexts,
+      descriptions,
+      cta: listingType === 'Satilik' ? 'Daha Fazla Bilgi' : 'Hemen Ara',
+      imageSpecs: {
+        feed: '1200x628 px (yatay, Facebook akisi)',
+        square: '1080x1080 px (kare, carousel)',
+        story: '1080x1920 px (dikey, hikaye)',
+      },
+      targeting,
+      budget,
+      estimatedReach,
       propertyTitle: property.title,
       propertyPrice: formattedPrice,
       location,
@@ -155,71 +525,192 @@ export class SocialAdsService {
   }
 
   /**
-   * Instagram reklam icerigi olustur.
+   * Instagram reklam paketi olustur.
    */
-  async generateInstagramAd(propertyId: string, user: AuthenticatedUser): Promise<AdContent> {
+  async generateInstagramAd(propertyId: string, user: AuthenticatedUser): Promise<InstagramAdPack> {
     const property = await this.getPropertyForAd(propertyId, user);
-    const baseUrl = config.server.frontendUrl || 'http://localhost:3000';
-
-    const locationParts = [property.ilce?.name, property.il?.name].filter(Boolean);
-    const location = locationParts.join(', ');
-
-    const listingType = property.listingType.toLocaleUpperCase('tr-TR').includes('SATILIK')
-      ? 'SATILIK'
-      : 'KIRALIK';
-
+    const location = this.getLocation(property);
+    const shortLocation = this.getShortLocation(property);
+    const listingTypeUpper = this.getListingTypeLabelUpper(property.listingType);
     const formattedPrice = formatTurkishPrice(property.price, property.currency || 'TRY');
+    const featureNames = this.getFeatureNames(property);
+    const targeting = this.generateTargeting(property);
+    const budget = this.generateBudgetRecommendation(property.price, property.listingType);
+    const hashtags = this.generateHashtags(property);
 
-    const headline = `${listingType} | ${location}`;
+    const specs: string[] = [];
+    if (property.roomCount) specs.push(`${property.roomCount}`);
+    if (property.grossSqm) specs.push(`${property.grossSqm} m\u00B2`);
+    if (property.floorNumber != null) specs.push(`${property.floorNumber}. Kat`);
+    if (property.buildingAge != null) specs.push(`${property.buildingAge} yasinda`);
 
-    const descriptionParts: string[] = [
-      `${listingType} ${property.propertyType || 'Gayrimenkul'}`,
+    const featureText = featureNames.length > 0
+      ? featureNames.slice(0, 4).join(' | ')
+      : '';
+
+    const agentLine = property.assignedUser
+      ? `${property.assignedUser.firstName} ${property.assignedUser.lastName}${property.assignedUser.phone ? ' | ' + property.assignedUser.phone : ''}`
+      : '';
+
+    // Feed post caption
+    const captionParts: string[] = [
+      `\u2728 ${listingTypeUpper} | ${property.propertyType} \u2728`,
       '',
-      `${formattedPrice}`,
-      `${location}`,
+      `\uD83D\uDCB0 ${formattedPrice}`,
+      `\uD83D\uDCCD ${location}`,
+    ];
+    if (specs.length > 0) {
+      captionParts.push(`\uD83C\uDFE0 ${specs.join(' | ')}`);
+    }
+    if (featureText) {
+      captionParts.push('');
+      captionParts.push(`\u2705 ${featureText}`);
+    }
+    if (property.description) {
+      const shortDesc = property.description.length > 150
+        ? property.description.substring(0, 150) + '...'
+        : property.description;
+      captionParts.push('');
+      captionParts.push(shortDesc);
+    }
+    captionParts.push('');
+    captionParts.push('\uD83D\uDC49 Detayli bilgi icin DM gonderin veya profildeki linke tiklayin!');
+    if (agentLine) {
+      captionParts.push(`\uD83D\uDCDE ${agentLine}`);
+    }
+    captionParts.push(`\uD83C\uDFE2 ${property.office.name}`);
+    captionParts.push('');
+    const allHashtags = [...hashtags.high, ...hashtags.medium, ...hashtags.niche];
+    captionParts.push(allHashtags.join(' '));
+
+    const feedCaption = captionParts.join('\n');
+
+    // Story text overlays
+    const storyTextOverlays: string[] = [
+      `${listingTypeUpper} | ${formattedPrice}`,
+      `${shortLocation}`,
+      specs.length > 0 ? specs.join(' | ') : property.propertyType,
+      `${property.office.name}`,
     ];
 
-    if (property.roomCount) {
-      descriptionParts.push(`${property.roomCount} | ${property.grossSqm || '-'} m2`);
+    // Carousel onerileri
+    const carouselSuggestions: string[] = [
+      '1. Slide: Dis cephe / ana gorsel (dikkat cekici)',
+      '2. Slide: Salon / oturma odasi',
+      '3. Slide: Mutfak',
+      '4. Slide: Yatak odalari',
+      '5. Slide: Banyo',
+    ];
+    if (property.photos.length > 5) {
+      carouselSuggestions.push('6. Slide: Balkon / bahce / manzara');
     }
-
-    const featureNames = property.features.map((pf) => pf.feature.nameTr);
     if (featureNames.length > 0) {
-      descriptionParts.push('');
-      descriptionParts.push(featureNames.slice(0, 4).join(' | '));
+      carouselSuggestions.push(`Son Slide: Ozellikler listesi gorseli (${featureNames.slice(0, 5).join(', ')})`);
     }
+    carouselSuggestions.push('Son Slide: Fiyat + iletisim bilgisi');
 
-    descriptionParts.push('');
-    descriptionParts.push('Detayli bilgi icin DM gonderin veya profildeki linke tiklayin!');
-    descriptionParts.push('');
-    descriptionParts.push(property.office.name);
+    // En iyi paylasim zamani
+    const bestPostingTime = 'Hafta ici: 12:00-13:00 veya 19:00-21:00 | Hafta sonu: 10:00-12:00 (Turkiye yerel saati)';
 
-    const hashtags = this.generateHashtags(property, 'instagram');
+    // Konum etiketi
+    const locationTag = property.ilce?.name && property.il?.name
+      ? `${property.ilce.name}, ${property.il.name}`
+      : property.il?.name || 'Turkiye';
 
-    const imageUrl = property.photos[0]
-      ? (property.photos[0].url.startsWith('http') ? property.photos[0].url : `${baseUrl}${property.photos[0].url}`)
-      : null;
-
-    const suggestedBudget = {
-      daily: property.price > 5000000 ? 120 : property.price > 1000000 ? 80 : 40,
-      weekly: property.price > 5000000 ? 600 : property.price > 1000000 ? 400 : 200,
-      currency: 'TRY',
-    };
-
-    logger.info(`Instagram reklam icerigi olusturuldu: ilan ${propertyId}`);
+    logger.info(`Instagram reklam paketi olusturuldu: ilan ${propertyId}`);
 
     return {
-      headline,
-      description: descriptionParts.join('\n'),
+      feedCaption,
+      storyTextOverlays,
       hashtags,
-      callToAction: 'DM ile bilgi alin!',
-      imageUrl,
-      suggestedBudget,
+      bestPostingTime,
+      carouselSuggestions,
+      locationTag,
+      targeting,
+      budget,
       propertyTitle: property.title,
       propertyPrice: formattedPrice,
       location,
       roomCount: property.roomCount || '-',
       sqm: property.grossSqm ? `${property.grossSqm} m2` : '-',
+    };
+  }
+
+  /**
+   * Google Ads reklam paketi olustur.
+   */
+  async generateGoogleAd(propertyId: string, user: AuthenticatedUser): Promise<GoogleAdPack> {
+    const property = await this.getPropertyForAd(propertyId, user);
+    const location = this.getLocation(property);
+    const shortLocation = this.getShortLocation(property);
+    const listingType = this.getListingTypeLabel(property.listingType);
+    const formattedPrice = formatTurkishPrice(property.price, property.currency || 'TRY');
+    const targeting = this.generateTargeting(property);
+    const budget = this.generateBudgetRecommendation(property.price, property.listingType);
+    const keywords = this.generateKeywords(property);
+
+    const roomStr = property.roomCount ? `${property.roomCount}` : '';
+    const sqmStr = property.grossSqm ? `${property.grossSqm} m2` : '';
+
+    // 3 baslik (max 30 karakter)
+    const headlines: string[] = [
+      truncate(`${listingType} ${property.propertyType} ${shortLocation}`, 30),
+      truncate(`${formattedPrice}${roomStr ? ` ${roomStr}` : ''}`, 30),
+      truncate(`${property.office.name} Emlak`, 30),
+    ];
+
+    // 2 aciklama (max 90 karakter)
+    const specParts = [roomStr, sqmStr].filter(Boolean).join(', ');
+    const descriptions: string[] = [
+      truncate(`${shortLocation} ${listingType.toLocaleLowerCase('tr-TR')} ${property.propertyType.toLocaleLowerCase('tr-TR')}. ${specParts ? specParts + '.' : ''} Hemen bilgi alin!`, 90),
+      truncate(`${formattedPrice} fiyatli ${property.propertyType.toLocaleLowerCase('tr-TR')}. ${location}. Detayli bilgi icin tiklayin.`, 90),
+    ];
+
+    // Gorunen URL yol onerileri
+    const il = property.il?.name?.toLocaleLowerCase('tr-TR').replace(/\s+/g, '-') || 'emlak';
+    const displayUrlPaths: string[] = [
+      `${listingType.toLocaleLowerCase('tr-TR')}/${il}`,
+      `emlak/${il}`,
+    ];
+
+    // Teklif stratejisi
+    const isSale = listingType === 'Satilik';
+    const bidStrategy = isSale
+      ? 'Hedef EBM (Edinme Basina Maliyet): Satis ilanlarinda donusum odakli teklif stratejisi oneriyoruz. Baslangic EBM hedefi: 50-100 TL.'
+      : 'Tiklama Sayisini En Ust Duzeye Cikarin: Kiralik ilanlarda trafik odakli strateji daha etkilidir. Gunluk butce siniri ile kontrol saglayin.';
+
+    logger.info(`Google Ads reklam paketi olusturuldu: ilan ${propertyId}`);
+
+    return {
+      headlines,
+      descriptions,
+      displayUrlPaths,
+      keywords,
+      bidStrategy,
+      targeting,
+      budget,
+      propertyTitle: property.title,
+      propertyPrice: formattedPrice,
+      location,
+      roomCount: property.roomCount || '-',
+      sqm: property.grossSqm ? `${property.grossSqm} m2` : '-',
+    };
+  }
+
+  /**
+   * Anahtar kelime raporu.
+   */
+  async generateKeywordsReport(propertyId: string, user: AuthenticatedUser): Promise<KeywordsResult> {
+    const property = await this.getPropertyForAd(propertyId, user);
+    const keywords = this.generateKeywords(property);
+    const location = this.getLocation(property);
+
+    logger.info(`Anahtar kelime raporu olusturuldu: ilan ${propertyId}`);
+
+    return {
+      ...keywords,
+      propertyTitle: property.title,
+      location,
     };
   }
 
@@ -230,12 +721,8 @@ export class SocialAdsService {
     const property = await this.getPropertyForAd(propertyId, user);
     const baseUrl = config.server.frontendUrl || 'http://localhost:3000';
 
-    const listingBadge = property.listingType.toLocaleUpperCase('tr-TR').includes('SATILIK')
-      ? 'SATILIK'
-      : 'KIRALIK';
-
+    const listingBadge = this.getListingTypeLabelUpper(property.listingType);
     const formattedPrice = formatTurkishPrice(property.price, property.currency || 'TRY');
-
     const locationParts = [property.ilce?.name, property.il?.name].filter(Boolean);
     const location = locationParts.join(', ');
 
@@ -435,80 +922,6 @@ export class SocialAdsService {
 
     logger.info(`Reklam gorseli olusturuldu: ilan ${propertyId}`);
     return html;
-  }
-
-  /**
-   * Platform bazli hashtag olustur.
-   */
-  private generateHashtags(
-    property: {
-      propertyType: string;
-      listingType: string;
-      il?: { name: string } | null;
-      ilce?: { name: string } | null;
-      mahalle?: { name: string } | null;
-      roomCount?: string | null;
-      features: Array<{ feature: { nameTr: string; category: string } }>;
-    },
-    platform: 'facebook' | 'instagram'
-  ): string[] {
-    const tags: string[] = [];
-
-    // Temel hashtag'ler
-    tags.push('#emlak', '#gayrimenkul', '#turkiyeemlak');
-
-    const listingType = property.listingType.toLocaleUpperCase('tr-TR');
-    if (listingType.includes('SATILIK')) {
-      tags.push('#satilik', '#satilikemlak');
-    } else {
-      tags.push('#kiralik', '#kiralikemlak');
-    }
-
-    // Gayrimenkul tipi
-    const pType = property.propertyType.toLocaleLowerCase('tr-TR');
-    if (pType.includes('daire')) tags.push('#daire', '#satiliknev', '#satilikdaire');
-    if (pType.includes('villa')) tags.push('#villa', '#satilikvilla');
-    if (pType.includes('arsa')) tags.push('#arsa', '#satilikarsa');
-    if (pType.includes('dublex')) tags.push('#dublex');
-    if (pType.includes('residence')) tags.push('#residence');
-
-    // Konum hashtag'leri
-    if (property.il?.name) {
-      const ilSlug = property.il.name.toLocaleLowerCase('tr-TR').replace(/\s+/g, '');
-      tags.push(`#${ilSlug}`, `#${ilSlug}emlak`);
-    }
-    if (property.ilce?.name) {
-      const ilceSlug = property.ilce.name.toLocaleLowerCase('tr-TR').replace(/\s+/g, '');
-      tags.push(`#${ilceSlug}`);
-    }
-    if (property.mahalle?.name) {
-      const mahalleSlug = property.mahalle.name.toLocaleLowerCase('tr-TR').replace(/\s+/g, '');
-      tags.push(`#${mahalleSlug}`);
-    }
-
-    // Oda sayisi
-    if (property.roomCount) {
-      tags.push(`#${property.roomCount.replace('+', 'arti')}`);
-    }
-
-    // Genel hashtag'ler
-    tags.push('#emlakofisi', '#yatirimaraciyemlak', '#tasinmaz');
-
-    if (platform === 'instagram') {
-      // Instagram icin daha fazla hashtag
-      tags.push(
-        '#ev', '#evsahipliigi', '#yeniev', '#konut',
-        '#insaat', '#mimari', '#dekorasyon', '#evdekorasyonu',
-        '#yasam', '#yatirim', '#gayrimenkulyatirim',
-        '#emlakdanismani', '#emlakcisi', '#satisasunuldu'
-      );
-
-      // 30 hashtag limitine uymak icin kes
-      return [...new Set(tags)].slice(0, 30);
-    }
-
-    // Facebook icin daha az hashtag
-    return [...new Set(tags)].slice(0, 15);
   }
 }
 

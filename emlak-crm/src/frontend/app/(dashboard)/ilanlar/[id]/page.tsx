@@ -216,13 +216,30 @@ export default function IlanDetailPage() {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showAdDialog, setShowAdDialog] = useState(false);
-  const [adPlatform, setAdPlatform] = useState<"facebook" | "instagram">("facebook");
-  const { data: adData } = useQuery({
-    queryKey: ["social-ad", id, adPlatform],
-    queryFn: async () => { const r = await api.get(`/api/v1/social-ads/${id}/${adPlatform}`); return r.data?.data || r.data; },
+  const [adPlatform, setAdPlatform] = useState<"facebook" | "instagram" | "google">("facebook");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const { data: fbAdData, isLoading: fbLoading } = useQuery({
+    queryKey: ["social-ad", id, "facebook"],
+    queryFn: async () => { const r = await api.get(`/api/v1/social-ads/${id}/facebook`); return r.data?.data || r.data; },
+    enabled: showAdDialog,
+  });
+  const { data: igAdData, isLoading: igLoading } = useQuery({
+    queryKey: ["social-ad", id, "instagram"],
+    queryFn: async () => { const r = await api.get(`/api/v1/social-ads/${id}/instagram`); return r.data?.data || r.data; },
+    enabled: showAdDialog,
+  });
+  const { data: googleAdData, isLoading: googleLoading } = useQuery({
+    queryKey: ["social-ad", id, "google"],
+    queryFn: async () => { const r = await api.get(`/api/v1/social-ads/${id}/google`); return r.data?.data || r.data; },
     enabled: showAdDialog,
   });
   const [shareToast, setShareToast] = useState(false);
+
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // ---- Queries ----
   const { data: property, isLoading, isError } = useQuery<Property>({
@@ -470,7 +487,14 @@ export default function IlanDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(`http://localhost:3001/api/v1/brochure/${id}`, '_blank')}
+            onClick={async () => {
+              try {
+                const res = await api.get(`/api/v1/brochure/${id}`, { responseType: 'text' });
+                const html = typeof res.data === 'string' ? res.data : res.data?.data || '';
+                const win = window.open('', '_blank');
+                if (win) { win.document.write(html); win.document.close(); }
+              } catch { alert('Brosur olusturulamadi'); }
+            }}
           >
             <FileText className="mr-2 h-3.5 w-3.5" />
             Brosur Olustur
@@ -994,67 +1018,493 @@ export default function IlanDetailPage() {
 
       {/* Ad Creator Dialog */}
       <Dialog open={showAdDialog} onOpenChange={setShowAdDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Reklam Olustur</DialogTitle>
             <DialogDescription>
-              Sosyal medya reklam metni otomatik olusturuldu. Kopyalayip kullanabilirsiniz.
+              Sosyal medya reklam icerikleriniz otomatik olusturuldu. Platformu secin, varyantlari inceleyin ve kopyalayin.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Button variant={adPlatform === "facebook" ? "default" : "outline"} size="sm" onClick={() => setAdPlatform("facebook")}>Facebook</Button>
-              <Button variant={adPlatform === "instagram" ? "default" : "outline"} size="sm" onClick={() => setAdPlatform("instagram")}>Instagram</Button>
-            </div>
-            {adData ? (
-              <div className="space-y-4">
-                {adData.headline && (
+
+          <Tabs value={adPlatform} onValueChange={(v) => setAdPlatform(v as "facebook" | "instagram" | "google")}>
+            <TabsList className="w-full">
+              <TabsTrigger value="facebook" className="flex-1">Facebook</TabsTrigger>
+              <TabsTrigger value="instagram" className="flex-1">Instagram</TabsTrigger>
+              <TabsTrigger value="google" className="flex-1">Google Ads</TabsTrigger>
+            </TabsList>
+
+            {/* ===== FACEBOOK TAB ===== */}
+            <TabsContent value="facebook">
+              {fbLoading || !fbAdData ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">Facebook reklam icerigi olusturuluyor...</span>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Baslik Varyantlari */}
                   <div>
-                    <label className="text-sm font-medium">Baslik</label>
-                    <div className="mt-1 flex gap-2">
-                      <p className="flex-1 rounded border bg-muted p-3 text-sm">{adData.headline}</p>
-                      <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(adData.headline); }}>Kopyala</Button>
+                    <h4 className="text-sm font-semibold mb-2">Baslik Varyantlari (A/B Test)</h4>
+                    <div className="space-y-2">
+                      {(fbAdData.headlines as string[] || []).map((h: string, i: number) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Badge variant="secondary" className="shrink-0">V{i + 1}</Badge>
+                          <p className="flex-1 rounded border bg-muted px-3 py-2 text-sm">{h}</p>
+                          <Button size="sm" variant="outline" onClick={() => copyToClipboard(h, `fb-h-${i}`)}>
+                            {copiedField === `fb-h-${i}` ? <CheckCircle2 className="h-3.5 w-3.5" /> : "Kopyala"}
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
-                {adData.description && (
+
+                  {/* Birincil Metin Varyantlari */}
                   <div>
-                    <label className="text-sm font-medium">Aciklama</label>
-                    <div className="mt-1 flex gap-2">
-                      <p className="flex-1 rounded border bg-muted p-3 text-sm whitespace-pre-wrap">{adData.description}</p>
-                      <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(adData.description); }}>Kopyala</Button>
+                    <h4 className="text-sm font-semibold mb-2">Birincil Metin Varyantlari</h4>
+                    <div className="space-y-2">
+                      {(fbAdData.primaryTexts as string[] || []).map((t: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <Badge variant="secondary" className="shrink-0 mt-2">V{i + 1}</Badge>
+                          <p className="flex-1 rounded border bg-muted px-3 py-2 text-sm whitespace-pre-wrap">{t}</p>
+                          <Button size="sm" variant="outline" className="shrink-0" onClick={() => copyToClipboard(t, `fb-t-${i}`)}>
+                            {copiedField === `fb-t-${i}` ? <CheckCircle2 className="h-3.5 w-3.5" /> : "Kopyala"}
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
-                {adData.hashtags && (
+
+                  {/* Aciklama Varyantlari */}
                   <div>
-                    <label className="text-sm font-medium">Hashtag&apos;ler</label>
-                    <div className="mt-1 flex gap-2">
-                      <p className="flex-1 rounded border bg-muted p-3 text-sm text-blue-600">{Array.isArray(adData.hashtags) ? adData.hashtags.join(" ") : adData.hashtags}</p>
-                      <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(Array.isArray(adData.hashtags) ? adData.hashtags.join(" ") : adData.hashtags); }}>Kopyala</Button>
+                    <h4 className="text-sm font-semibold mb-2">Aciklama Varyantlari</h4>
+                    <div className="space-y-2">
+                      {(fbAdData.descriptions as string[] || []).map((d: string, i: number) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Badge variant="secondary" className="shrink-0">V{i + 1}</Badge>
+                          <p className="flex-1 rounded border bg-muted px-3 py-2 text-sm">{d}</p>
+                          <Button size="sm" variant="outline" onClick={() => copyToClipboard(d, `fb-d-${i}`)}>
+                            {copiedField === `fb-d-${i}` ? <CheckCircle2 className="h-3.5 w-3.5" /> : "Kopyala"}
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
-                {adData.callToAction && (
+
+                  {/* CTA */}
+                  {fbAdData.cta && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">CTA Butonu Onerisi</h4>
+                      <Badge variant="info">{fbAdData.cta as string}</Badge>
+                    </div>
+                  )}
+
+                  {/* Gorsel Boyutlari */}
+                  {fbAdData.imageSpecs && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Gorsel Boyutlari</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {Object.entries(fbAdData.imageSpecs as Record<string, string>).map(([key, val]) => (
+                          <div key={key} className="rounded border bg-muted/50 p-3 text-center">
+                            <p className="text-xs text-muted-foreground mb-1">{key === 'feed' ? 'Akis' : key === 'square' ? 'Kare' : 'Hikaye'}</p>
+                            <p className="text-sm font-medium">{val}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hedef Kitle */}
+                  {fbAdData.targeting && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Hedef Kitle Onerisi</h4>
+                      <div className="rounded border bg-muted/30 p-4 space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Konum:</span> <span className="font-medium">{(fbAdData.targeting as Record<string, unknown>).location as string} ({(fbAdData.targeting as Record<string, unknown>).radius as string})</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Yas Araligi:</span> <span className="font-medium">{(fbAdData.targeting as Record<string, unknown>).ageRange as string}</span></div>
+                        <div><span className="text-muted-foreground">Ilgi Alanlari:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {((fbAdData.targeting as Record<string, unknown>).interests as string[] || []).map((interest: string, i: number) => (
+                              <Badge key={i} variant="secondary" className="text-xs">{interest}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div><span className="text-muted-foreground">Davranislar:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {((fbAdData.targeting as Record<string, unknown>).behaviors as string[] || []).map((b: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs">{b}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Butce Onerisi */}
+                  {fbAdData.budget && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Butce Onerisi</h4>
+                      <div className="rounded border bg-blue-50 dark:bg-blue-950/20 p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="text-center rounded bg-white dark:bg-background p-3 border">
+                            <p className="text-xs text-muted-foreground">Gunluk Butce</p>
+                            <p className="text-lg font-bold text-primary">{(fbAdData.budget as Record<string, unknown>).dailyBudget as number} TL</p>
+                          </div>
+                          <div className="text-center rounded bg-white dark:bg-background p-3 border">
+                            <p className="text-xs text-muted-foreground">Haftalik Butce</p>
+                            <p className="text-lg font-bold text-primary">{(fbAdData.budget as Record<string, unknown>).weeklyBudget as number} TL</p>
+                          </div>
+                        </div>
+                        {Boolean((fbAdData.budget as Record<string, unknown>).estimatedImpressions) && (
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div><span className="text-muted-foreground">Tahmini Gunluk Gosterim: </span><span className="font-medium">{((fbAdData.budget as Record<string, Record<string, string>>).estimatedImpressions).daily}</span></div>
+                            <div><span className="text-muted-foreground">Tahmini Gunluk Tiklama: </span><span className="font-medium">{((fbAdData.budget as Record<string, Record<string, string>>).estimatedClicks).daily}</span></div>
+                          </div>
+                        )}
+                        <p className="text-sm text-muted-foreground">{(fbAdData.budget as Record<string, unknown>).reasoning as string}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tumunu Kopyala */}
+                  <Button className="w-full" onClick={() => {
+                    const allHeadlines = (fbAdData.headlines as string[] || []).map((h: string, i: number) => `Baslik ${i + 1}: ${h}`).join('\n');
+                    const allTexts = (fbAdData.primaryTexts as string[] || []).map((t: string, i: number) => `Metin ${i + 1}: ${t}`).join('\n');
+                    const allDescs = (fbAdData.descriptions as string[] || []).map((d: string, i: number) => `Aciklama ${i + 1}: ${d}`).join('\n');
+                    copyToClipboard(`${allHeadlines}\n\n${allTexts}\n\n${allDescs}`, 'fb-all');
+                  }}>
+                    {copiedField === 'fb-all' ? 'Kopyalandi!' : 'Tum Metinleri Kopyala'}
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ===== INSTAGRAM TAB ===== */}
+            <TabsContent value="instagram">
+              {igLoading || !igAdData ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">Instagram reklam icerigi olusturuluyor...</span>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Feed Caption */}
                   <div>
-                    <label className="text-sm font-medium">Aksiyon Cagrisi</label>
-                    <p className="mt-1 rounded border bg-muted p-3 text-sm">{adData.callToAction}</p>
+                    <h4 className="text-sm font-semibold mb-2">Feed Post Metni</h4>
+                    <div className="flex gap-2">
+                      <p className="flex-1 rounded border bg-muted px-3 py-2 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">{igAdData.feedCaption as string}</p>
+                      <Button size="sm" variant="outline" className="shrink-0" onClick={() => copyToClipboard(igAdData.feedCaption as string, 'ig-caption')}>
+                        {copiedField === 'ig-caption' ? <CheckCircle2 className="h-3.5 w-3.5" /> : "Kopyala"}
+                      </Button>
+                    </div>
                   </div>
-                )}
-                <Button className="w-full" onClick={() => {
-                  const full = `${adData.headline || ""}\n\n${adData.description || ""}\n\n${Array.isArray(adData.hashtags) ? adData.hashtags.join(" ") : adData.hashtags || ""}`;
-                  navigator.clipboard.writeText(full);
-                }}>
-                  Tumunu Kopyala
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">Reklam icerigi olusturuluyor...</span>
-              </div>
-            )}
-          </div>
+
+                  {/* Story Overlays */}
+                  {igAdData.storyTextOverlays && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Hikaye Metin Onerileri</h4>
+                      <div className="space-y-2">
+                        {(igAdData.storyTextOverlays as string[]).map((s: string, i: number) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <Badge variant="secondary" className="shrink-0">Slide {i + 1}</Badge>
+                            <p className="flex-1 rounded border bg-muted px-3 py-2 text-sm">{s}</p>
+                            <Button size="sm" variant="outline" onClick={() => copyToClipboard(s, `ig-s-${i}`)}>
+                              {copiedField === `ig-s-${i}` ? <CheckCircle2 className="h-3.5 w-3.5" /> : "Kopyala"}
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hashtags - Kategorilere ayrilmis */}
+                  {igAdData.hashtags && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Hashtag&apos;ler (30 adet, kategorilere ayrilmis)</h4>
+                      <div className="space-y-3">
+                        {([
+                          { key: 'high', label: 'Yuksek Hacim', color: 'text-emerald-600 dark:text-emerald-400' },
+                          { key: 'medium', label: 'Orta Hacim', color: 'text-amber-600 dark:text-amber-400' },
+                          { key: 'niche', label: 'Nis', color: 'text-blue-600 dark:text-blue-400' },
+                        ] as const).map(({ key, label, color }) => {
+                          const tags = (igAdData.hashtags as Record<string, string[]>)[key] || [];
+                          return (
+                            <div key={key}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs text-muted-foreground">{label} ({tags.length})</span>
+                                <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copyToClipboard(tags.join(' '), `ig-ht-${key}`)}>
+                                  {copiedField === `ig-ht-${key}` ? 'Kopyalandi' : 'Kopyala'}
+                                </Button>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {tags.map((tag: string, i: number) => (
+                                  <span
+                                    key={i}
+                                    className={cn("text-sm cursor-pointer hover:underline", color)}
+                                    onClick={() => copyToClipboard(tag, `ig-tag-${key}-${i}`)}
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                        <Button size="sm" variant="outline" className="w-full" onClick={() => {
+                          const all = [
+                            ...((igAdData.hashtags as Record<string, string[]>).high || []),
+                            ...((igAdData.hashtags as Record<string, string[]>).medium || []),
+                            ...((igAdData.hashtags as Record<string, string[]>).niche || []),
+                          ];
+                          copyToClipboard(all.join(' '), 'ig-ht-all');
+                        }}>
+                          {copiedField === 'ig-ht-all' ? 'Kopyalandi!' : 'Tum Hashtag\'leri Kopyala'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Carousel Onerileri */}
+                  {igAdData.carouselSuggestions && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Carousel Paylasim Sirasi</h4>
+                      <div className="space-y-1">
+                        {(igAdData.carouselSuggestions as string[]).map((s: string, i: number) => (
+                          <p key={i} className="text-sm text-muted-foreground">{s}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Konum Etiketi ve Zaman */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {igAdData.locationTag && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">Konum Etiketi</h4>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm">{igAdData.locationTag as string}</span>
+                        </div>
+                      </div>
+                    )}
+                    {igAdData.bestPostingTime && (
+                      <div>
+                        <h4 className="text-sm font-semibold mb-1">En Iyi Paylasim Zamani</h4>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm">{igAdData.bestPostingTime as string}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hedef Kitle */}
+                  {igAdData.targeting && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Hedef Kitle Onerisi</h4>
+                      <div className="rounded border bg-muted/30 p-4 space-y-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Konum:</span> <span className="font-medium">{(igAdData.targeting as Record<string, unknown>).location as string}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Yas Araligi:</span> <span className="font-medium">{(igAdData.targeting as Record<string, unknown>).ageRange as string}</span></div>
+                        <div><span className="text-muted-foreground">Ilgi Alanlari: </span>
+                          <span className="font-medium">{((igAdData.targeting as Record<string, unknown>).interests as string[] || []).join(', ')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Butce */}
+                  {igAdData.budget && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Butce Onerisi</h4>
+                      <div className="rounded border bg-blue-50 dark:bg-blue-950/20 p-4 space-y-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="text-center rounded bg-white dark:bg-background p-3 border">
+                            <p className="text-xs text-muted-foreground">Gunluk</p>
+                            <p className="text-lg font-bold text-primary">{(igAdData.budget as Record<string, unknown>).dailyBudget as number} TL</p>
+                          </div>
+                          <div className="text-center rounded bg-white dark:bg-background p-3 border">
+                            <p className="text-xs text-muted-foreground">Haftalik</p>
+                            <p className="text-lg font-bold text-primary">{(igAdData.budget as Record<string, unknown>).weeklyBudget as number} TL</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{(igAdData.budget as Record<string, unknown>).reasoning as string}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tumunu Kopyala */}
+                  <Button className="w-full" onClick={() => copyToClipboard(igAdData.feedCaption as string, 'ig-all')}>
+                    {copiedField === 'ig-all' ? 'Kopyalandi!' : 'Tum Metinleri Kopyala'}
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ===== GOOGLE ADS TAB ===== */}
+            <TabsContent value="google">
+              {googleLoading || !googleAdData ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-sm text-muted-foreground">Google Ads icerigi olusturuluyor...</span>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Basliklar */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Duyarli Arama Reklami Basliklari (max 30 karakter)</h4>
+                    <div className="space-y-2">
+                      {(googleAdData.headlines as string[] || []).map((h: string, i: number) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <Badge variant="secondary" className="shrink-0">H{i + 1}</Badge>
+                          <p className="flex-1 rounded border bg-muted px-3 py-2 text-sm">{h}</p>
+                          <span className="text-xs text-muted-foreground shrink-0">{h.length}/30</span>
+                          <Button size="sm" variant="outline" onClick={() => copyToClipboard(h, `g-h-${i}`)}>
+                            {copiedField === `g-h-${i}` ? <CheckCircle2 className="h-3.5 w-3.5" /> : "Kopyala"}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Aciklamalar */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Aciklamalar (max 90 karakter)</h4>
+                    <div className="space-y-2">
+                      {(googleAdData.descriptions as string[] || []).map((d: string, i: number) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <Badge variant="secondary" className="shrink-0 mt-2">D{i + 1}</Badge>
+                          <p className="flex-1 rounded border bg-muted px-3 py-2 text-sm">{d}</p>
+                          <span className="text-xs text-muted-foreground shrink-0 mt-2">{d.length}/90</span>
+                          <Button size="sm" variant="outline" className="shrink-0" onClick={() => copyToClipboard(d, `g-d-${i}`)}>
+                            {copiedField === `g-d-${i}` ? <CheckCircle2 className="h-3.5 w-3.5" /> : "Kopyala"}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* URL Yollari */}
+                  {googleAdData.displayUrlPaths && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Gorunen URL Yolu</h4>
+                      <div className="space-y-1">
+                        {(googleAdData.displayUrlPaths as string[]).map((p: string, i: number) => (
+                          <p key={i} className="text-sm text-muted-foreground">ornek.com/<span className="font-medium text-foreground">{p}</span></p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Onizleme */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2">Reklam Onizlemesi</h4>
+                    <div className="rounded border bg-white dark:bg-muted/30 p-4 space-y-1">
+                      <p className="text-sm text-muted-foreground">Reklam</p>
+                      <p className="text-blue-600 dark:text-blue-400 text-base font-medium">
+                        {(googleAdData.headlines as string[]).join(' | ')}
+                      </p>
+                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                        ornek.com/{(googleAdData.displayUrlPaths as string[])[0] || ''}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{(googleAdData.descriptions as string[])[0] || ''}</p>
+                    </div>
+                  </div>
+
+                  {/* Anahtar Kelimeler */}
+                  {googleAdData.keywords && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Anahtar Kelimeler</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground font-medium">Birincil Anahtar Kelimeler</span>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copyToClipboard(((googleAdData.keywords as Record<string, string[]>).primary || []).join(', '), 'g-kw-p')}>
+                              {copiedField === 'g-kw-p' ? 'Kopyalandi' : 'Kopyala'}
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {((googleAdData.keywords as Record<string, string[]>).primary || []).map((kw: string, i: number) => (
+                              <Badge key={i} variant="default" className="text-xs cursor-pointer" onClick={() => copyToClipboard(kw, `g-kw-p-${i}`)}>{kw}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground font-medium">Ikincil Anahtar Kelimeler</span>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copyToClipboard(((googleAdData.keywords as Record<string, string[]>).secondary || []).join(', '), 'g-kw-s')}>
+                              {copiedField === 'g-kw-s' ? 'Kopyalandi' : 'Kopyala'}
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {((googleAdData.keywords as Record<string, string[]>).secondary || []).map((kw: string, i: number) => (
+                              <Badge key={i} variant="secondary" className="text-xs cursor-pointer" onClick={() => copyToClipboard(kw, `g-kw-s-${i}`)}>{kw}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-muted-foreground font-medium">Negatif Anahtar Kelimeler</span>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => copyToClipboard(((googleAdData.keywords as Record<string, string[]>).negative || []).join(', '), 'g-kw-n')}>
+                              {copiedField === 'g-kw-n' ? 'Kopyalandi' : 'Kopyala'}
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {((googleAdData.keywords as Record<string, string[]>).negative || []).map((kw: string, i: number) => (
+                              <Badge key={i} variant="destructive" className="text-xs cursor-pointer" onClick={() => copyToClipboard(kw, `g-kw-n-${i}`)}>{kw}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Teklif Stratejisi */}
+                  {googleAdData.bidStrategy && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Teklif Stratejisi</h4>
+                      <p className="text-sm text-muted-foreground rounded border bg-muted/30 p-3">{googleAdData.bidStrategy as string}</p>
+                    </div>
+                  )}
+
+                  {/* Butce */}
+                  {googleAdData.budget && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Butce Onerisi</h4>
+                      <div className="rounded border bg-blue-50 dark:bg-blue-950/20 p-4 space-y-2">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="text-center rounded bg-white dark:bg-background p-3 border">
+                            <p className="text-xs text-muted-foreground">Gunluk</p>
+                            <p className="text-lg font-bold text-primary">{(googleAdData.budget as Record<string, unknown>).dailyBudget as number} TL</p>
+                          </div>
+                          <div className="text-center rounded bg-white dark:bg-background p-3 border">
+                            <p className="text-xs text-muted-foreground">Haftalik</p>
+                            <p className="text-lg font-bold text-primary">{(googleAdData.budget as Record<string, unknown>).weeklyBudget as number} TL</p>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{(googleAdData.budget as Record<string, unknown>).reasoning as string}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Kopyala Butonlari */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="outline" onClick={() => {
+                      const allH = (googleAdData.headlines as string[]).join('\n');
+                      const allD = (googleAdData.descriptions as string[]).join('\n');
+                      copyToClipboard(`${allH}\n\n${allD}`, 'g-all-text');
+                    }}>
+                      {copiedField === 'g-all-text' ? 'Kopyalandi!' : 'Tum Metinleri Kopyala'}
+                    </Button>
+                    <Button variant="outline" onClick={() => {
+                      const kw = googleAdData.keywords as Record<string, string[]>;
+                      const all = [...(kw.primary || []), ...(kw.secondary || [])].join(', ');
+                      copyToClipboard(all, 'g-all-kw');
+                    }}>
+                      {copiedField === 'g-all-kw' ? 'Kopyalandi!' : 'Anahtar Kelimeleri Kopyala'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>
