@@ -89,6 +89,7 @@ model Office {
   messages         Message[]
   messageTemplates MessageTemplate[]
   buildings        Building[]
+  demandPosts      DemandPost[]
 
   @@map("offices")
 }
@@ -129,6 +130,7 @@ model User {
   dealStageChanges      DealStageHistory[] @relation("DealStageChangedBy")
   uploadedDocuments     PropertyDocument[] @relation("DocumentUploadedBy")
   auditLogs             AuditLog[]
+  demandPosts           DemandPost[]
 
   @@index([officeId])
   @@index([email])
@@ -767,9 +769,10 @@ model Il {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  ilceler    Ilce[]
-  properties Property[]
-  buildings  Building[]
+  ilceler     Ilce[]
+  properties  Property[]
+  buildings   Building[]
+  demandPosts DemandPost[]
 
   @@index([plateCode])
   @@map("iller")
@@ -785,10 +788,11 @@ model Ilce {
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  il         Il         @relation(fields: [ilId], references: [id], onDelete: Cascade)
-  mahalleler Mahalle[]
-  properties Property[]
-  buildings  Building[]
+  il          Il          @relation(fields: [ilId], references: [id], onDelete: Cascade)
+  mahalleler  Mahalle[]
+  properties  Property[]
+  buildings   Building[]
+  demandPosts DemandPost[]
 
   @@unique([ilId, name])
   @@index([ilId])
@@ -806,9 +810,10 @@ model Mahalle {
   createdAt  DateTime @default(now()) @map("created_at")
 
   // Relations
-  ilce       Ilce       @relation(fields: [ilceId], references: [id], onDelete: Cascade)
-  properties Property[]
-  buildings  Building[]
+  ilce        Ilce        @relation(fields: [ilceId], references: [id], onDelete: Cascade)
+  properties  Property[]
+  buildings   Building[]
+  demandPosts DemandPost[]
 
   @@unique([ilceId, name])
   @@index([ilceId])
@@ -897,4 +902,49 @@ model KvkkConsent {
   @@index([consentType])
   @@index([contactId, consentType])
   @@map("kvkk_consents")
+}
+
+// ---------------------------------------------------------------------------
+// DemandPost - Talep Havuzu (MLS)
+// ---------------------------------------------------------------------------
+model DemandPost {
+  id            String    @id @default(cuid())
+  officeId      String    @map("office_id")
+  userId        String    @map("user_id")
+  type          String    @default("DEMAND")
+  propertyType  String?   @map("property_type")
+  listingType   String?   @map("listing_type")
+  ilId          String?   @map("il_id")
+  ilceId        String?   @map("ilce_id")
+  mahalleId     String?   @map("mahalle_id")
+  budgetMin     Float?    @map("budget_min")
+  budgetMax     Float?    @map("budget_max")
+  roomCount     String?   @map("room_count")
+  minSqm        Int?      @map("min_sqm")
+  maxSqm        Int?      @map("max_sqm")
+  description   String?
+  contactName   String?   @map("contact_name")
+  contactPhone  String?   @map("contact_phone")
+  isActive      Boolean   @default(true) @map("is_active")
+  expiresAt     DateTime? @map("expires_at")
+  viewCount     Int       @default(0) @map("view_count")
+  responseCount Int       @default(0) @map("response_count")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  office  Office   @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  il      Il?      @relation(fields: [ilId], references: [id])
+  ilce    Ilce?    @relation(fields: [ilceId], references: [id])
+  mahalle Mahalle? @relation(fields: [mahalleId], references: [id])
+
+  @@index([officeId])
+  @@index([userId])
+  @@index([type])
+  @@index([isActive])
+  @@index([ilId])
+  @@index([ilceId])
+  @@index([createdAt])
+  @@map("demand_posts")
 }

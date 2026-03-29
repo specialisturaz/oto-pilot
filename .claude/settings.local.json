@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/Users/mekte/**)"
+      "Read(//c/Users/mekte/**)",
+      "WebFetch(domain:re-os.com)"
     ],
     "additionalDirectories": [
       "C:\\Users\\mekte\\.claude"

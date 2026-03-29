@@ -17,6 +17,8 @@ import {
   ChevronRight,
   LogOut,
   CheckSquare,
+  Zap,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore, useAuthStore } from "@/lib/store";
@@ -32,6 +34,8 @@ const navItems = [
   { href: "/takvim", label: "Takvim", icon: Calendar },
   { href: "/mesajlar", label: "Mesajlar", icon: MessageSquare },
   { href: "/portallar", label: "Portallar", icon: Globe },
+  { href: "/eslestirme", label: "Eslestirme", icon: Zap },
+  { href: "/talep-havuzu", label: "Talep Havuzu", icon: Megaphone },
   { href: "/raporlar", label: "Raporlar", icon: BarChart3 },
   { href: "/belgeler", label: "Belgeler", icon: FileText },
   { href: "/ayarlar", label: "Ayarlar", icon: Settings },

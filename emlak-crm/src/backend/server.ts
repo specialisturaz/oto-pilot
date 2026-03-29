@@ -31,6 +31,11 @@ import usersRoutes from './modules/users/users.routes';
 import portalsRoutes from './modules/portals/portals.routes';
 import activitiesRoutes from './modules/activities/activities.routes';
 import documentsRoutes from './modules/documents/documents.routes';
+import brochureRoutes from './modules/brochure/brochure.routes';
+import socialAdsRoutes from './modules/social-ads/social-ads.routes';
+import govReportsRoutes from './modules/gov-reports/gov-reports.routes';
+import matchingRoutes from './modules/matching/matching.routes';
+import demandPoolRoutes from './modules/demand-pool/demand-pool.routes';
 
 const app = express();
 
@@ -160,6 +165,11 @@ app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/portals', portalsRoutes);
 app.use('/api/v1/activities', activitiesRoutes);
 app.use('/api/v1/documents', documentsRoutes);
+app.use('/api/v1/brochure', brochureRoutes);
+app.use('/api/v1/social-ads', socialAdsRoutes);
+app.use('/api/v1/gov-reports', govReportsRoutes);
+app.use('/api/v1/matching', matchingRoutes);
+app.use('/api/v1/demand-pool', demandPoolRoutes);
 
 // ---------------------------------------------------------------------------
 // 404 handler for unmatched routes
