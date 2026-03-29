@@ -215,6 +215,13 @@ export default function IlanDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showAdDialog, setShowAdDialog] = useState(false);
+  const [adPlatform, setAdPlatform] = useState<"facebook" | "instagram">("facebook");
+  const { data: adData } = useQuery({
+    queryKey: ["social-ad", id, adPlatform],
+    queryFn: async () => { const r = await api.get(`/api/v1/social-ads/${id}/${adPlatform}`); return r.data?.data || r.data; },
+    enabled: showAdDialog,
+  });
   const [shareToast, setShareToast] = useState(false);
 
   // ---- Queries ----
@@ -459,6 +466,22 @@ export default function IlanDetailPage() {
           >
             <Edit2 className="mr-2 h-3.5 w-3.5" />
             Duzenle
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`http://localhost:3001/api/v1/brochure/${id}`, '_blank')}
+          >
+            <FileText className="mr-2 h-3.5 w-3.5" />
+            Brosur Olustur
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAdDialog(true)}
+          >
+            <Globe className="mr-2 h-3.5 w-3.5" />
+            Reklam Olustur
           </Button>
           <Button
             variant="destructive"
@@ -966,6 +989,72 @@ export default function IlanDetailPage() {
               Evet, Sil
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ad Creator Dialog */}
+      <Dialog open={showAdDialog} onOpenChange={setShowAdDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reklam Olustur</DialogTitle>
+            <DialogDescription>
+              Sosyal medya reklam metni otomatik olusturuldu. Kopyalayip kullanabilirsiniz.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Button variant={adPlatform === "facebook" ? "default" : "outline"} size="sm" onClick={() => setAdPlatform("facebook")}>Facebook</Button>
+              <Button variant={adPlatform === "instagram" ? "default" : "outline"} size="sm" onClick={() => setAdPlatform("instagram")}>Instagram</Button>
+            </div>
+            {adData ? (
+              <div className="space-y-4">
+                {adData.headline && (
+                  <div>
+                    <label className="text-sm font-medium">Baslik</label>
+                    <div className="mt-1 flex gap-2">
+                      <p className="flex-1 rounded border bg-muted p-3 text-sm">{adData.headline}</p>
+                      <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(adData.headline); }}>Kopyala</Button>
+                    </div>
+                  </div>
+                )}
+                {adData.description && (
+                  <div>
+                    <label className="text-sm font-medium">Aciklama</label>
+                    <div className="mt-1 flex gap-2">
+                      <p className="flex-1 rounded border bg-muted p-3 text-sm whitespace-pre-wrap">{adData.description}</p>
+                      <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(adData.description); }}>Kopyala</Button>
+                    </div>
+                  </div>
+                )}
+                {adData.hashtags && (
+                  <div>
+                    <label className="text-sm font-medium">Hashtag&apos;ler</label>
+                    <div className="mt-1 flex gap-2">
+                      <p className="flex-1 rounded border bg-muted p-3 text-sm text-blue-600">{Array.isArray(adData.hashtags) ? adData.hashtags.join(" ") : adData.hashtags}</p>
+                      <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(Array.isArray(adData.hashtags) ? adData.hashtags.join(" ") : adData.hashtags); }}>Kopyala</Button>
+                    </div>
+                  </div>
+                )}
+                {adData.callToAction && (
+                  <div>
+                    <label className="text-sm font-medium">Aksiyon Cagrisi</label>
+                    <p className="mt-1 rounded border bg-muted p-3 text-sm">{adData.callToAction}</p>
+                  </div>
+                )}
+                <Button className="w-full" onClick={() => {
+                  const full = `${adData.headline || ""}\n\n${adData.description || ""}\n\n${Array.isArray(adData.hashtags) ? adData.hashtags.join(" ") : adData.hashtags || ""}`;
+                  navigator.clipboard.writeText(full);
+                }}>
+                  Tumunu Kopyala
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Reklam icerigi olusturuluyor...</span>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

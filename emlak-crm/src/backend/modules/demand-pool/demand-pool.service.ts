@@ -15,12 +15,29 @@ export class DemandPoolService {
   /**
    * List all active demands with pagination and filters.
    */
+  /**
+   * MLS Mantığı:
+   * - mode=mls (varsayılan): Tüm ofislerin isPublic=true taleplerine eriş
+   * - mode=office: Sadece kendi ofisinin taleplerini gör (dahili)
+   */
   async listDemands(filters: DemandFilterInput, user: AuthenticatedUser) {
     const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(filters);
+    const mode = (filters as any).mode || 'mls';
 
     const where: Prisma.DemandPostWhereInput = {
       isActive: true,
     };
+
+    if (mode === 'office') {
+      // Sadece kendi ofisinin talepleri
+      where.officeId = user.officeId!;
+    } else {
+      // MLS: herkese açık talepler + kendi ofisinin gizli talepleri
+      where.OR = [
+        { isPublic: true },
+        { officeId: user.officeId! },
+      ];
+    }
 
     if (filters.type) {
       where.type = filters.type;
@@ -114,6 +131,7 @@ export class DemandPoolService {
         description: data.description || null,
         contactName: data.contact_name || null,
         contactPhone: data.contact_phone || null,
+        isPublic: data.is_public !== false, // varsayılan: herkese açık (MLS)
         expiresAt,
       },
       include: {

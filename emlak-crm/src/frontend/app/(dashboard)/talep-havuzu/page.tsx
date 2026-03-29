@@ -13,7 +13,7 @@ import { formatPrice, formatRelativeDate } from "@/lib/utils";
 
 export default function TalepHavuzuPage() {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"all" | "my">("all");
+  const [tab, setTab] = useState<"mls" | "office" | "my">("mls");
   const [typeFilter, setTypeFilter] = useState("all");
   const [showForm, setShowForm] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export default function TalepHavuzuPage() {
   const [form, setForm] = useState({
     type: "DEMAND", propertyType: "", listingType: "SALE",
     ilId: "", budgetMin: "", budgetMax: "", roomCount: "", minSqm: "", maxSqm: "",
-    description: "", contactName: "", contactPhone: "",
+    description: "", contactName: "", contactPhone: "", isPublic: true,
   });
 
   const { data: locations } = useQuery({
@@ -34,6 +34,7 @@ export default function TalepHavuzuPage() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (typeFilter !== "all") params.set("type", typeFilter);
+      if (tab === "office") params.set("mode", "office");
       const url = tab === "my" ? "/api/v1/demand-pool/my-posts" : `/api/v1/demand-pool?${params}`;
       const r = await api.get(url);
       return r.data;
@@ -47,7 +48,7 @@ export default function TalepHavuzuPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["demand-pool"] });
       setShowForm(false);
-      setForm({ type: "DEMAND", propertyType: "", listingType: "SALE", ilId: "", budgetMin: "", budgetMax: "", roomCount: "", minSqm: "", maxSqm: "", description: "", contactName: "", contactPhone: "" });
+      setForm({ type: "DEMAND", propertyType: "", listingType: "SALE", ilId: "", budgetMin: "", budgetMax: "", roomCount: "", minSqm: "", maxSqm: "", description: "", contactName: "", contactPhone: "", isPublic: true });
     },
   });
 
@@ -125,7 +126,8 @@ export default function TalepHavuzuPage() {
       )}
 
       <div className="flex gap-2 flex-wrap">
-        <Button variant={tab === "all" ? "default" : "outline"} size="sm" onClick={() => setTab("all")}>Tum Talepler</Button>
+        <Button variant={tab === "mls" ? "default" : "outline"} size="sm" onClick={() => setTab("mls")}>MLS Pazari (Tum Ofisler)</Button>
+        <Button variant={tab === "office" ? "default" : "outline"} size="sm" onClick={() => setTab("office")}>Ofis Ici</Button>
         <Button variant={tab === "my" ? "default" : "outline"} size="sm" onClick={() => setTab("my")}>Benim Taleplerim</Button>
         <div className="h-8 w-px bg-border mx-2" />
         {[{ v: "all", l: "Tumunu Goster" }, { v: "DEMAND", l: "Talepler" }, { v: "OFFER", l: "Teklifler" }].map(f => (

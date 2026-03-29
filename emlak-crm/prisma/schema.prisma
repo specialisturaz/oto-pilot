@@ -925,6 +925,8 @@ model DemandPost {
   description   String?
   contactName   String?   @map("contact_name")
   contactPhone  String?   @map("contact_phone")
+  isPublic      Boolean   @default(true) @map("is_public")
+  officeName    String?   @map("office_name")
   isActive      Boolean   @default(true) @map("is_active")
   expiresAt     DateTime? @map("expires_at")
   viewCount     Int       @default(0) @map("view_count")

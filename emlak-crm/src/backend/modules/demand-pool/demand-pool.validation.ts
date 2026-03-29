@@ -23,6 +23,7 @@ export const createDemandSchema = z.object({
   description: z.string().max(2000).optional().nullable(),
   contact_name: z.string().max(100).optional().nullable(),
   contact_phone: z.string().max(20).optional().nullable(),
+  is_public: z.boolean().optional().default(true),
   expires_at: z.string().datetime().optional().nullable(),
 });
 
